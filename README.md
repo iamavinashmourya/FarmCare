@@ -153,11 +153,47 @@ VITE_API_URL=http://localhost:5000
 
 ## Contributing
 
+### Branch Structure
+- `main` - Production branch
+- `develop` - Main development branch
+- `feature/*` - Feature branches
+- `staging` - Pre-production testing
+- `hotfix` - Urgent fixes for production
+- `release` - Release preparation
+
+### Development Workflow
 1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
-3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
-4. Push to the branch (`git push origin feature/AmazingFeature`)
-5. Open a Pull Request
+2. Clone your fork:
+   ```bash
+   git clone https://github.com/your-username/FarmCare.git
+   ```
+3. Add upstream remote:
+   ```bash
+   git remote add upstream https://github.com/iamavinashmourya/FarmCare.git
+   ```
+4. Create your feature branch from develop:
+   ```bash
+   git checkout develop
+   git pull upstream develop
+   git checkout -b feature/your-feature-name
+   ```
+5. Commit your changes:
+   ```bash
+   git add .
+   git commit -m 'Add some feature'
+   ```
+6. Push to your fork:
+   ```bash
+   git push origin feature/your-feature-name
+   ```
+7. Create a Pull Request to the `develop` branch
+
+### Pull Request Process
+1. Ensure your PR title clearly describes the change
+2. Link any related issues in the PR description
+3. Update documentation as needed
+4. Add tests if applicable
+5. Request review from maintainers
 
 ## License
 
