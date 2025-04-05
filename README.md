@@ -1,6 +1,6 @@
 # FarmCare - Smart Agriculture Management System
 
-![FarmCare Logo](https://farmcare-crop-images.s3.ap-south-1.amazonaws.com/crops/logo.png) <!-- You can add your logo image later -->
+![FarmCare Logo](https://farmcare-crop-images.s3.ap-south-1.amazonaws.com/crops/Logo_1Farmcare.png) <!-- You can add your logo image later -->
 
 ## Overview
 
