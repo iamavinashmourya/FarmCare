@@ -1,0 +1,47 @@
+{
+  "name": "farmcare",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "lint": "eslint .",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@headlessui/react": "^1.7.18",
+    "@heroicons/react": "^2.2.0",
+    "@mui/icons-material": "^6.4.8",
+    "autoprefixer": "^10.4.18",
+    "axios": "^1.8.4",
+    "jwt-decode": "^4.0.0",
+    "postcss": "^8.4.35",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "react-hot-toast": "^2.5.2",
+    "react-icons": "^5.5.0",
+    "react-router-dom": "^6.30.0",
+    "react-slick": "^0.30.3",
+    "react-toastify": "^10.0.4",
+    "slick-carousel": "^1.8.1",
+    "tailwindcss": "^3.4.1",
+    "framer-motion": "^10.16.4"
+  },
+  "devDependencies": {
+    "@emotion/react": "^11.14.0",
+    "@emotion/styled": "^11.14.0",
+    "@eslint/js": "^8.56.0",
+    "@mui/material": "^6.4.8",
+    "@types/node": "^22.13.13",
+    "@types/react": "^18.3.20",
+    "@types/react-dom": "^18.2.19",
+    "@types/react-router-dom": "^5.3.3",
+    "@vitejs/plugin-react": "^4.2.1",
+    "eslint": "^8.56.0",
+    "eslint-plugin-react-hooks": "^4.6.0",
+    "eslint-plugin-react-refresh": "^0.4.5",
+    "globals": "^13.24.0",
+    "vite": "^6.2.2"
+  }
+}

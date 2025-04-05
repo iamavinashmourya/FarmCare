@@ -1,0 +1,486 @@
+import axios from 'axios';
+
+// Use environment variable for API base URL
+const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
+
+const api = axios.create({
+  baseURL: API_BASE_URL,
+  headers: {
+    'Content-Type': 'application/json',
+  },
+  // Add CORS settings
+  withCredentials: true,
+});
+
+// Add request interceptor to include auth token
+api.interceptors.request.use((config) => {
+  const token = localStorage.getItem('token');
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
+});
+
+// Add response interceptor to handle errors
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    console.error('API Error:', error.response?.data || error.message);
+    if (error.response?.status === 401) {
+      localStorage.removeItem('token');
+      window.location.href = '/login';
+    }
+    return Promise.reject(error);
+  }
+);
+
+export const auth = {
+  login: async (loginId, password) => {
+    const response = await api.post('/user/login', { login_id: loginId, password });
+    return response.data;
+  },
+  register: async (userData) => {
+    const response = await api.post('/user/register', userData);
+    return response.data;
+  },
+  adminLogin: async (loginId, password) => {
+    const response = await api.post('/admin/login', { login_id: loginId, password });
+    return response.data;
+  },
+  adminRegister: async (userData) => {
+    const response = await api.post('/admin/register', userData);
+    return response.data;
+  },
+  logout: async () => {
+    const response = await api.post('/user/logout');
+    localStorage.removeItem('token');
+    localStorage.removeItem('userData');
+    return response.data;
+  },
+  updateProfile: async (data) => {
+    try {
+      const response = await api.put('/user/profile', data, {
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Profile update error:', error.response?.data || error.message);
+      throw error;
+    }
+  },
+  updateProfileImage: async (formData) => {
+    try {
+      const response = await api.post('/user/profile/image', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        }
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Profile image update error:', error.response?.data || error.message);
+      throw error;
+    }
+  },
+  getProfile: async () => {
+    try {
+      const response = await api.get('/user/profile');
+      return response.data;
+    } catch (error) {
+      console.error('Get profile error:', error.response?.data || error.message);
+      throw error;
+    }
+  }
+};
+
+export const diseaseDetection = {
+  uploadImage: async (file) => {
+    try {
+    const formData = new FormData();
+    formData.append('file', file);
+      
+      // Make direct request to Flask server
+      const response = await axios.post('http://127.0.0.1:5000/user/upload', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+
+      if (!response.data) {
+        throw new Error('No response from server');
+      }
+
+    return response.data;
+    } catch (error) {
+      console.error('Error in uploadImage:', error);
+      if (error.response) {
+        // The request was made and the server responded with a status code
+        // that falls out of the range of 2xx
+        throw new Error(error.response.data.message || 'Server error');
+      } else if (error.request) {
+        // The request was made but no response was received
+        throw new Error('No response from server. Please check if the server is running.');
+      } else {
+        // Something happened in setting up the request that triggered an Error
+        throw new Error('Error setting up the request');
+      }
+    }
+  },
+};
+
+export const marketPrices = {
+  getPrices: async (state, region) => {
+    const response = await api.get('/prices', { params: { state, region } });
+    return response.data;
+  },
+  addPrice: async (priceData) => {
+    const formData = new FormData();
+    Object.keys(priceData).forEach(key => {
+      if (key === 'image' && priceData[key]) {
+        formData.append('image', priceData[key]);
+      } else if (priceData[key] !== null) {
+        formData.append(key, priceData[key]);
+      }
+    });
+    const response = await api.post('/admin/prices', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+    return response.data;
+  },
+  updatePrice: async (priceId, priceData) => {
+    const formData = new FormData();
+    Object.keys(priceData).forEach(key => {
+      if (key === 'image' && priceData[key]) {
+        formData.append('image', priceData[key]);
+      } else if (priceData[key] !== null) {
+        formData.append(key, priceData[key]);
+      }
+    });
+    const response = await api.put(`/admin/prices/${priceId}`, formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+    return response.data;
+  },
+  deletePrice: async (priceId) => {
+    const response = await api.delete(`/admin/prices/${priceId}`);
+    return response.data;
+  },
+};
+
+export const schemes = {
+  getSchemes: async (state) => {
+    const response = await api.get('/schemes', { params: { state } });
+    return response.data;
+  },
+  addScheme: async (schemeData) => {
+    const response = await api.post('/admin/schemes', schemeData);
+    return response.data;
+  },
+  updateScheme: async (schemeId, schemeData) => {
+    const response = await api.put(`/admin/schemes/${schemeId}`, schemeData);
+    return response.data;
+  },
+  deleteScheme: async (schemeId) => {
+    const response = await api.delete(`/admin/schemes/${schemeId}`);
+    return response.data;
+  },
+};
+
+export const getMarketPrices = async (lat, lng) => {
+  try {
+    const response = await api.get('/market-prices', {
+      params: { lat, lng },
+    });
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching market prices:', error);
+    return [];
+  }
+};
+
+export const getAiInsights = async () => {
+  try {
+    const response = await api.get('/ai-insights');
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching AI insights:', error);
+    return [];
+  }
+};
+
+export const getSchemes = async () => {
+  try {
+    const response = await api.get('/schemes');
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching schemes:', error);
+    return [];
+  }
+};
+
+export const detectPlantDisease = async (formData) => {
+  try {
+    const token = localStorage.getItem('token'); // Get token from localStorage
+    if (!token) {
+      throw new Error('No authentication token found');
+    }
+
+    const response = await axios.post('http://127.0.0.1:5000/user/upload', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+        'Authorization': `Bearer ${token}`
+      }
+    });
+
+    return response.data;
+  } catch (error) {
+    console.error('Error in detectPlantDisease:', error);
+    if (error.response?.status === 401) {
+      throw new Error('Please login to use this feature');
+    }
+    throw error;
+  }
+};
+
+// Market Prices API
+const prices = {
+  getAll: async (state = null, region = null) => {
+    try {
+      const params = new URLSearchParams();
+      if (state) params.append('state', state);
+      if (region) params.append('region', region);
+      const response = await api.get(`/api/prices?${params.toString()}`);
+      return response.data;
+    } catch (error) {
+      throw error;
+    }
+  },
+
+  getByLocation: async (latitude, longitude) => {
+    try {
+      const params = new URLSearchParams({
+        latitude: latitude.toString(),
+        longitude: longitude.toString()
+      });
+      const response = await api.get(`/api/market-prices?${params.toString()}`);
+      return response.data;
+    } catch (error) {
+      throw error;
+    }
+  },
+
+  create: async (priceData) => {
+    try {
+      const response = await api.post('/api/prices', priceData);
+      return response.data;
+    } catch (error) {
+      throw error;
+    }
+  },
+
+  update: async (id, priceData) => {
+    try {
+      const response = await api.put(`/api/prices/${id}`, priceData);
+      return response.data;
+    } catch (error) {
+      throw error;
+    }
+  },
+
+  delete: async (id) => {
+    try {
+      const response = await api.delete(`/api/prices/${id}`);
+      return response.data;
+    } catch (error) {
+      throw error;
+    }
+  }
+};
+
+export const expertArticles = {
+  getAll: async (category = null) => {
+    try {
+      const params = new URLSearchParams();
+      if (category && category !== 'all') {
+        params.append('category', category);
+      }
+      const response = await api.get(`/expert-articles${params.toString() ? `?${params.toString()}` : ''}`);
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching expert articles:', error);
+      throw error;
+    }
+  },
+
+  getById: async (articleId) => {
+    try {
+      const response = await api.get(`/expert-articles/${articleId}`);
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching article:', error);
+      throw error;
+    }
+  },
+
+  create: async (articleData) => {
+    try {
+      const formData = new FormData();
+      Object.keys(articleData).forEach(key => {
+        if (key === 'image' && articleData[key]) {
+          formData.append('image', articleData[key]);
+        } else {
+          formData.append(key, articleData[key].toString());
+        }
+      });
+      const response = await api.post('/admin/expert-articles', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Error creating article:', error);
+      throw error;
+    }
+  },
+
+  update: async (articleId, articleData) => {
+    try {
+      const formData = new FormData();
+      Object.keys(articleData).forEach(key => {
+        if (key === 'image' && articleData[key]) {
+          formData.append('image', articleData[key]);
+        } else if (articleData[key] !== null) {
+          formData.append(key, articleData[key].toString());
+        }
+      });
+      const response = await api.put(`/admin/expert-articles/${articleId}`, formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Error updating article:', error);
+      throw error;
+    }
+  },
+
+  delete: async (articleId) => {
+    try {
+      const response = await api.delete(`/admin/expert-articles/${articleId}`);
+      return response.data;
+    } catch (error) {
+      console.error('Error deleting article:', error);
+      throw error;
+    }
+  }
+};
+
+export const dailyNews = {
+  getAll: async () => {
+    try {
+      const response = await api.get('/daily-news');
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching daily news:', error);
+      throw error;
+    }
+  },
+
+  getById: async (newsId) => {
+    try {
+      const response = await api.get(`/daily-news/${newsId}`);
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching news item:', error);
+      throw error;
+    }
+  },
+
+  create: async (newsData) => {
+    try {
+      const formData = new FormData();
+      Object.keys(newsData).forEach(key => {
+        if (key === 'image' && newsData[key]) {
+          formData.append('image', newsData[key]);
+        } else {
+          formData.append(key, newsData[key].toString());
+        }
+      });
+      const response = await api.post('/admin/daily-news', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Error creating news:', error);
+      throw error;
+    }
+  },
+
+  update: async (newsId, newsData) => {
+    try {
+      const formData = new FormData();
+      Object.keys(newsData).forEach(key => {
+        if (key === 'image' && newsData[key]) {
+          formData.append('image', newsData[key]);
+        } else if (newsData[key] !== null) {
+          formData.append(key, newsData[key].toString());
+        }
+      });
+      const response = await api.put(`/admin/daily-news/${newsId}`, formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Error updating news:', error);
+      throw error;
+    }
+  },
+
+  delete: async (newsId) => {
+    try {
+      const response = await api.delete(`/admin/daily-news/${newsId}`);
+      return response.data;
+    } catch (error) {
+      console.error('Error deleting news:', error);
+      throw error;
+    }
+  }
+};
+
+export const getAnalysisCount = async () => {
+  try {
+    const response = await api.get('/user/analysis/count');
+    console.log('Analysis count response:', response.data); // Debug log
+    return response.data.count || 0;
+  } catch (error) {
+    console.error('Error fetching analysis count:', error.response?.data || error.message);
+    return 0;
+  }
+};
+
+export const weather = {
+  getWeather: async (lat, lon) => {
+    try {
+      const response = await api.get('/weather', {
+        params: { lat, lon }
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Weather fetch error:', error.response?.data || error.message);
+      throw error;
+    }
+  }
+};
+
+export { api as default, prices };
