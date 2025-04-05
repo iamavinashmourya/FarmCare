@@ -16,11 +16,11 @@ const api = axios.create({
 // Add request interceptor to include auth token and handle errors
 api.interceptors.request.use(
   (config) => {
-  const token = localStorage.getItem('token');
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
-  }
-  return config;
+    const token = localStorage.getItem('token');
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
   },
   (error) => {
     console.error('Request error:', error);
@@ -60,7 +60,7 @@ export const auth = {
     
     try {
       const response = await api.post('/user/register', formattedData);
-    return response.data;
+      return response.data;
     } catch (error) {
       console.error('Registration error:', error.response?.data || error.message);
       if (error.response?.data?.error) {
@@ -136,21 +136,21 @@ export const auth = {
 export const diseaseDetection = {
   uploadImage: async (file) => {
     try {
-    const formData = new FormData();
-    formData.append('file', file);
+      const formData = new FormData();
+      formData.append('file', file);
       
-    const response = await api.post('/user/upload', formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
+      const response = await api.post('/user/upload', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
         timeout: 30000, // 30 second timeout
-    });
+      });
 
       if (!response.data) {
         throw new Error('No response from server');
       }
 
-    return response.data;
+      return response.data;
     } catch (error) {
       console.error('Error in uploadImage:', error);
       if (error.response) {
