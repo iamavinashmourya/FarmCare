@@ -1059,33 +1059,41 @@ def delete_price_route(price_id):
 
 # Add this after other routes
 @app.route('/weather', methods=['GET'])
-@user_or_admin_required
 def get_weather():
-    """Get detailed weather data for agriculture (Authenticated Users Only)"""
+    """Get detailed weather data for agriculture"""
     try:
         lat = request.args.get('lat')
         lon = request.args.get('lon')
         
+        logger.info(f"Weather request received for coordinates: lat={lat}, lon={lon}")
+        
         if not lat or not lon:
+            logger.warning("Missing coordinates in weather request")
             return jsonify({"error": "Location coordinates required"}), 400
 
         # Using OpenWeatherMap API for detailed weather data
         api_key = os.getenv("OPENWEATHER_API_KEY")
         if not api_key:
+            logger.error("OpenWeather API key not configured")
             return jsonify({"error": "Weather API key not configured"}), 500
 
         weather_url = f"https://api.openweathermap.org/data/2.5/weather?lat={lat}&lon={lon}&appid={api_key}&units=metric"
         forecast_url = f"https://api.openweathermap.org/data/2.5/forecast?lat={lat}&lon={lon}&appid={api_key}&units=metric"
 
+        logger.info("Fetching weather data from OpenWeatherMap API")
+        
         # Get current weather and forecast
-        weather_response = requests.get(weather_url)
-        forecast_response = requests.get(forecast_url)
+        weather_response = requests.get(weather_url, timeout=5)
+        forecast_response = requests.get(forecast_url, timeout=5)
 
         if weather_response.status_code != 200 or forecast_response.status_code != 200:
+            logger.error(f"OpenWeatherMap API error - Weather status: {weather_response.status_code}, Forecast status: {forecast_response.status_code}")
             return jsonify({"error": "Failed to fetch weather data from external service"}), 500
 
         weather_data = weather_response.json()
         forecast_data = forecast_response.json()
+
+        logger.info("Successfully fetched weather data")
 
         # Calculate agricultural metrics
         agricultural_metrics = {
@@ -1094,9 +1102,6 @@ def get_weather():
             "frost_risk": "High" if weather_data["main"]["temp"] < 2 else "Low",
             "irrigation_need": calculate_irrigation_need(weather_data)
         }
-
-        # Get AI-based farming advice
-        farming_advice = generate_farming_advice(weather_data, forecast_data)
 
         # Format forecast data
         formatted_forecast = [
@@ -1122,20 +1127,21 @@ def get_weather():
                 "soil_temp": weather_data["main"]["temp"] - 2,  # Approximate soil temperature
             },
             "agricultural_metrics": agricultural_metrics,
-            "forecast": formatted_forecast,
-            "farming_advice": {
-                "risk_level": farming_advice["risk_level"],
-                "risk_indicator": farming_advice["risk_indicator"],
-                "weather_summary": farming_advice["weather_summary"],
-                "recommendations": farming_advice["advice"]
-            }
+            "forecast": formatted_forecast
         }
 
+        logger.info("Successfully processed weather data")
         return jsonify(agricultural_weather), 200
 
+    except requests.Timeout:
+        logger.error("Timeout while fetching weather data")
+        return jsonify({"error": "Weather service timeout. Please try again."}), 504
+    except requests.RequestException as e:
+        logger.error(f"Error fetching weather data: {str(e)}")
+        return jsonify({"error": "Failed to connect to weather service"}), 502
     except Exception as e:
-        print(f"Error fetching weather: {str(e)}")
-        return jsonify({"error": "Failed to fetch weather data"}), 500
+        logger.error(f"Unexpected error in weather endpoint: {str(e)}")
+        return jsonify({"error": "An unexpected error occurred"}), 500
 
 def calculate_evapotranspiration(weather_data):
     """Simple estimation of evapotranspiration"""

@@ -477,12 +477,23 @@ export const weather = {
   getWeather: async (lat, lon) => {
     try {
       const response = await api.get('/weather', {
-        params: { lat, lon }
+        params: { lat, lon },
+        timeout: 10000 // 10 second timeout
       });
       return response.data;
     } catch (error) {
-      console.error('Weather fetch error:', error.response?.data || error.message);
-      throw error;
+      console.error('Weather fetch error:', error);
+      if (error.response) {
+        // The request was made and the server responded with a status code
+        // that falls out of the range of 2xx
+        throw new Error(error.response.data.error || 'Failed to fetch weather data');
+      } else if (error.request) {
+        // The request was made but no response was received
+        throw new Error('No response from weather service. Please try again.');
+      } else {
+        // Something happened in setting up the request that triggered an Error
+        throw new Error('Error setting up weather request');
+      }
     }
   }
 };
