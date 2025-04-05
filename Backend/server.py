@@ -1116,6 +1116,9 @@ def get_weather():
             for item in forecast_data["list"][:8]  # Next 24 hours (3-hour intervals)
         ]
 
+        # Generate farming advice
+        farming_advice = generate_farming_advice(weather_data, forecast_data)
+
         # Combine all data
         agricultural_weather = {
             "current": {
@@ -1127,7 +1130,12 @@ def get_weather():
                 "soil_temp": weather_data["main"]["temp"] - 2,  # Approximate soil temperature
             },
             "agricultural_metrics": agricultural_metrics,
-            "forecast": formatted_forecast
+            "forecast": formatted_forecast,
+            "farming_advice": {
+                "risk_indicator": farming_advice["risk_indicator"],
+                "weather_summary": farming_advice["weather_summary"],
+                "recommendations": farming_advice["advice"]
+            }
         }
 
         logger.info("Successfully processed weather data")
@@ -1136,12 +1144,9 @@ def get_weather():
     except requests.Timeout:
         logger.error("Timeout while fetching weather data")
         return jsonify({"error": "Weather service timeout. Please try again."}), 504
-    except requests.RequestException as e:
-        logger.error(f"Error fetching weather data: {str(e)}")
-        return jsonify({"error": "Failed to connect to weather service"}), 502
     except Exception as e:
-        logger.error(f"Unexpected error in weather endpoint: {str(e)}")
-        return jsonify({"error": "An unexpected error occurred"}), 500
+        logger.error(f"Error processing weather data: {str(e)}")
+        return jsonify({"error": "Failed to process weather data"}), 500
 
 def calculate_evapotranspiration(weather_data):
     """Simple estimation of evapotranspiration"""
@@ -1187,7 +1192,7 @@ def generate_farming_advice(weather_data, forecast_data):
         if temp > 35:
             risk_level = "high"
             advice.extend([
-                "🌡️ High Temperature Alert:",
+                "High Temperature Alert:",
                 "• Use shade nets or temporary covers to protect sensitive crops",
                 "• Increase irrigation frequency but reduce water quantity per session",
                 "• Apply mulching to retain soil moisture",
@@ -1197,7 +1202,7 @@ def generate_farming_advice(weather_data, forecast_data):
         elif temp < 5:
             risk_level = "high"
             advice.extend([
-                "❄️ Cold Temperature Alert:",
+                "Cold Temperature Alert:",
                 "• Cover sensitive crops with row covers or frost protection sheets",
                 "• Maintain soil moisture to prevent frost damage",
                 "• Delay fertilizer application until temperature rises",
@@ -1209,7 +1214,7 @@ def generate_farming_advice(weather_data, forecast_data):
         if humidity > 80:
             risk_level = "moderate" if risk_level == "low" else risk_level
             advice.extend([
-                "💧 High Humidity Management:",
+                "High Humidity Management:",
                 "• Monitor for fungal disease development",
                 "• Increase plant spacing for better air circulation",
                 "• Consider preventive fungicide application",
@@ -1219,7 +1224,7 @@ def generate_farming_advice(weather_data, forecast_data):
         elif humidity < 30:
             risk_level = "moderate" if risk_level == "low" else risk_level
             advice.extend([
-                "🏜️ Low Humidity Management:",
+                "Low Humidity Management:",
                 "• Increase irrigation frequency",
                 "• Apply mulching to conserve soil moisture",
                 "• Consider drip irrigation implementation",
@@ -1231,7 +1236,7 @@ def generate_farming_advice(weather_data, forecast_data):
         if wind_speed > 20:
             risk_level = "high"
             advice.extend([
-                "💨 Strong Wind Advisory:",
+                "Strong Wind Advisory:",
                 "• Delay pesticide/fertilizer spraying",
                 "• Provide wind breaks for vulnerable crops",
                 "• Check and reinforce crop support structures",
@@ -1243,63 +1248,63 @@ def generate_farming_advice(weather_data, forecast_data):
         if rainfall > 5:
             risk_level = "moderate" if risk_level == "low" else risk_level
             advice.extend([
-                "🌧️ Rainfall Management:",
-                "Hold off on irrigation for next 24-48 hours",
-                "Monitor soil drainage in low-lying areas",
-                "Check for water logging and improve drainage if needed",
-                "Delay fertilizer application",
-                "Watch for signs of root diseases"
+                "Rainfall Management:",
+                "• Hold off on irrigation for next 24-48 hours",
+                "• Monitor soil drainage in low-lying areas",
+                "• Check for water logging and improve drainage if needed",
+                "• Delay fertilizer application",
+                "• Watch for signs of root diseases"
             ])
         
         # Forecast-based advice
         forecast_conditions = [item["weather"][0]["main"] for item in next_24h_forecast]
         if "Rain" in forecast_conditions:
             advice.extend([
-                "🌦️ Rain Expected in Next 24 Hours:",
-                "Plan harvesting activities accordingly",
-                "Prepare drainage systems",
-                "Delay any planned chemical applications",
-                "Consider protective covering for sensitive crops",
-                "Have equipment ready for water management"
+                "Rain Expected in Next 24 Hours:",
+                "• Plan harvesting activities accordingly",
+                "• Prepare drainage systems",
+                "• Delay any planned chemical applications",
+                "• Consider protective covering for sensitive crops",
+                "• Have equipment ready for water management"
             ])
         
         # General advice based on weather description
         if "clear" in description.lower():
             advice.extend([
-                "☀️ Clear Weather Operations:",
-                "Ideal time for pest monitoring",
-                "Good conditions for spraying operations",
-                "Consider soil moisture management",
-                "Optimal time for harvesting operations"
+                "Clear Weather Operations:",
+                "• Ideal time for pest monitoring",
+                "• Good conditions for spraying operations",
+                "• Consider soil moisture management",
+                "• Optimal time for harvesting operations"
             ])
         elif "cloud" in description.lower():
             advice.extend([
-                "☁️ Cloudy Conditions Management:",
-                "Good time for transplanting activities",
-                "Monitor humidity levels",
-                "Check for pest presence under leaves",
-                "Ideal conditions for foliar applications"
+                "Cloudy Conditions Management:",
+                "• Good time for transplanting activities",
+                "• Monitor humidity levels",
+                "• Check for pest presence under leaves",
+                "• Ideal conditions for foliar applications"
             ])
         
         # Add risk level indicator
         risk_indicator = {
-            "low": "🟢 Low Risk - Regular monitoring sufficient",
-            "moderate": "🟡 Moderate Risk - Increased vigilance needed",
-            "high": "🔴 High Risk - Immediate attention required"
+            "low": "Low Risk - Regular monitoring sufficient",
+            "moderate": "Moderate Risk - Increased vigilance needed",
+            "high": "High Risk - Immediate attention required"
         }
         
         return {
             "risk_level": risk_level,
             "risk_indicator": risk_indicator[risk_level],
             "weather_summary": f"Current Conditions: {description.capitalize()}, {temp}°C, {humidity}% Humidity, Wind {wind_speed}m/s",
-            "advice": advice
+            "advice": advice if advice else ["No specific farming advice needed for current conditions. Continue regular monitoring."]
         }
         
     except Exception as e:
-        print(f"Error generating farming advice: {str(e)}")
+        logger.error(f"Error generating farming advice: {str(e)}")
         return {
             "risk_level": "unknown",
-            "risk_indicator": "⚪ Risk Level Unknown",
+            "risk_indicator": "Risk Level Unknown",
             "weather_summary": "Weather data unavailable",
             "advice": ["Unable to generate specific farming advice. Please check weather data."]
         }

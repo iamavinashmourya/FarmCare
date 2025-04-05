@@ -156,7 +156,7 @@ function Weather() {
       </div>
 
       {/* Forecast */}
-      <div className="bg-white rounded-lg shadow-sm p-4">
+      <div className="bg-white rounded-lg shadow-sm p-4 mb-4">
         <h3 className="text-sm font-semibold text-gray-800 mb-3">24-Hour Forecast</h3>
         <div className="space-y-3">
           {weather.forecast.slice(0, 4).map((item, index) => (
@@ -173,6 +173,40 @@ function Weather() {
           ))}
         </div>
       </div>
+
+      {/* Farming Advice */}
+      {weather.farming_advice && (
+        <div className="bg-white rounded-lg shadow-sm p-4">
+          <h3 className="text-sm font-semibold text-gray-800 mb-3">Farming Advice</h3>
+          {weather.farming_advice.risk_indicator && (
+            <div className="flex items-center space-x-2 mb-3">
+              <div className={`w-3 h-3 rounded-full ${
+                weather.farming_advice.risk_indicator === 'Low Risk' ? 'bg-green-500' :
+                weather.farming_advice.risk_indicator === 'Medium Risk' ? 'bg-yellow-500' : 'bg-red-500'
+              }`}></div>
+              <span className="text-sm text-gray-700">{weather.farming_advice.risk_indicator}</span>
+            </div>
+          )}
+          {weather.farming_advice.weather_summary && (
+            <div className="text-sm text-gray-600 mb-3">{weather.farming_advice.weather_summary}</div>
+          )}
+          {weather.farming_advice.recommendations && weather.farming_advice.recommendations.length > 0 && (
+            <div className="space-y-2">
+              <h4 className="text-sm font-medium text-gray-700">Recommendations:</h4>
+              <ul className="space-y-2">
+                {weather.farming_advice.recommendations.map((advice, index) => (
+                  <li key={index} className="flex items-start space-x-2 text-sm">
+                    <svg className="w-4 h-4 text-emerald-600 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <span className="text-gray-700">{advice}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
