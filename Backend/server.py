@@ -38,14 +38,15 @@ logger = logging.getLogger(__name__)
 app = Flask(__name__)
 
 # Configure CORS with proper settings
-CORS(app, 
-     resources={r"/*": {
-         "origins": ["https://myfarmcare.vercel.app", "http://localhost:5173"],
-         "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-         "allow_headers": ["Content-Type", "Authorization"],
-         "supports_credentials": True,
-         "expose_headers": ["Content-Type", "Authorization"]
-     }})
+CORS(app, resources={
+    r"/*": {
+        "origins": ["https://myfarmcare.vercel.app", "http://localhost:5173"],
+        "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+        "allow_headers": ["Content-Type", "Authorization"],
+        "supports_credentials": True,
+        "expose_headers": ["Content-Type", "Authorization"]
+    }
+})
 
 # MongoDB connection
 try:
@@ -325,21 +326,19 @@ def user_register():
 
         # Create new user
         hashed_password = hash_password(data['password'])
-        user_data = {
-            'full_name': data['full_name'],
-            'email': data['email'],
-            'mobile': data['mobile'],
-            'password': hashed_password,
-            'state': data['state'],
-            'region': data['region'],
-            'created_at': datetime.datetime.utcnow()
-        }
-
-        user_id = create_user(user_data)
+        user = create_user(
+            full_name=data['full_name'],
+            email=data['email'],
+            mobile=data['mobile'],
+            password=hashed_password,
+            is_admin=False,
+            state=data['state'],
+            region=data['region']
+        )
         
         return jsonify({
             'message': 'Registration successful',
-            'user_id': str(user_id)
+            'user_id': str(user['_id'])
         }), 201
 
     except Exception as e:
@@ -745,8 +744,8 @@ def get_schemes_route():
 def get_prices_route():
     """Get all prices, optionally filtered by state and region (Public Access)"""
     try:
-    state = request.args.get('state')
-    region = request.args.get('region')
+        state = request.args.get('state')
+        region = request.args.get('region')
         prices = get_prices(state, region)
         
         # Add trend and change calculation for each price
@@ -772,7 +771,8 @@ def get_prices_route():
         
         return jsonify({"prices": prices}), 200
     except Exception as e:
-        return jsonify({"error": str(e)}), 400
+        logger.error(f"Error fetching prices: {str(e)}")
+        return jsonify({"error": "Failed to fetch prices"}), 500
 
 @app.route('/api/market-prices', methods=['GET'])
 def get_market_prices_route():
@@ -856,14 +856,14 @@ def upload_image():
     """Upload an image and process it with Gemini AI (User Access)"""
     try:
         print("Received upload request")
-    if 'file' not in request.files:
+        if 'file' not in request.files:
             print("No file in request")
-        return jsonify({"error": "No file uploaded"}), 400
-    
-    file = request.files['file']
-    if file.filename == '':
+            return jsonify({"error": "No file uploaded"}), 400
+        
+        file = request.files['file']
+        if file.filename == '':
             print("Empty filename")
-        return jsonify({"error": "No selected file"}), 400
+            return jsonify({"error": "No selected file"}), 400
             
         # Validate file type
         allowed_extensions = {'jpg', 'jpeg', 'png', 'gif', 'webp'}
@@ -876,20 +876,20 @@ def upload_image():
         if not os.path.exists("uploads"):
             os.makedirs("uploads")
         
-    file_path = os.path.join("uploads", file.filename)
-    file.save(file_path)  # Save the uploaded file
+        file_path = os.path.join("uploads", file.filename)
+        file.save(file_path)  # Save the uploaded file
         print(f"File saved to {file_path}")
 
-    try:
-        response_text = generate_gemini_response(input_prompt, file_path)
+        try:
+            response_text = generate_gemini_response(input_prompt, file_path)
             result = {
-            "file_path": file_path, 
-            "analysis": response_text,
-            "user_id": request.user["user_id"]
+                "file_path": file_path, 
+                "analysis": response_text,
+                "user_id": request.user["user_id"]
             }
             print("Analysis completed successfully")
             return jsonify(result), 200
-    except Exception as e:
+        except Exception as e:
             print(f"Error in analysis: {str(e)}")
             return jsonify({"error": f"Analysis failed: {str(e)}"}), 500
         finally:

@@ -95,31 +95,31 @@ function Login() {
               <div>
                 <label htmlFor="loginId" className="block text-sm font-medium text-gray-700">
                   Mobile or Email
-                </label>
-                <input
+          </label>
+          <input
                   id="loginId"
                   name="loginId"
-                  type="text"
+            type="text"
                   required
-                  value={formData.loginId}
-                  onChange={(e) => setFormData({ ...formData, loginId: e.target.value })}
+            value={formData.loginId}
+            onChange={(e) => setFormData({ ...formData, loginId: e.target.value })}
                   className="mt-1 block w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-1 focus:ring-green-500 focus:border-green-500 outline-none transition-colors"
                   placeholder="Enter your mobile or email"
-                />
-              </div>
+          />
+        </div>
 
               <div>
                 <label htmlFor="password" className="block text-sm font-medium text-gray-700">
-                  Password
-                </label>
+            Password
+          </label>
                 <div className="mt-1 relative">
-                  <input
-                    id="password"
+          <input
+            id="password"
                     name="password"
                     type={showPassword ? "text" : "password"}
                     required
-                    value={formData.password}
-                    onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+            value={formData.password}
+            onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                     className="block w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-1 focus:ring-green-500 focus:border-green-500 outline-none transition-colors"
                     placeholder="Enter your password"
                   />
@@ -135,22 +135,22 @@ function Login() {
                     )}
                   </button>
                 </div>
-              </div>
+        </div>
 
               <div className="flex items-center justify-between">
                 <div className="flex items-center">
-                  <input
+            <input
                     id="isAdmin"
                     name="isAdmin"
-                    type="checkbox"
-                    checked={formData.isAdmin}
-                    onChange={(e) => setFormData({ ...formData, isAdmin: e.target.checked })}
+              type="checkbox"
+              checked={formData.isAdmin}
+              onChange={(e) => setFormData({ ...formData, isAdmin: e.target.checked })}
                     className="h-4 w-4 text-green-600 focus:ring-green-500 border-gray-300 rounded"
-                  />
+            />
                   <label htmlFor="isAdmin" className="ml-2 block text-sm text-gray-700">
                     Login as Admin
-                  </label>
-                </div>
+          </label>
+        </div>
                 <Link to="/forgot-password" className="text-sm font-medium text-green-600 hover:text-green-500">
                   Forgot password?
                 </Link>
@@ -160,9 +160,9 @@ function Login() {
                 type="submit"
                 className="w-full flex justify-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-colors"
               >
-                Login
-              </button>
-            </form>
+          Login
+        </button>
+      </form>
 
             <div className="mt-6 text-center">
               <p className="text-sm text-gray-600">
