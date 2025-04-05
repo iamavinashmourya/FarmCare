@@ -35,21 +35,23 @@ logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
 
-# Configure CORS
-CORS(app, resources={
-    r"/*": {
-        "origins": [
-            "http://localhost:5173",
-            "http://127.0.0.1:5173",
-            "https://farmcare.vercel.app",
-            "https://myfarmcare.vercel.app",
-            "https://farmcare-ze9p.onrender.com"
-        ],
-        "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-        "allow_headers": ["Content-Type", "Authorization"],
-        "supports_credentials": True
-    }
-})
+# Configure CORS with proper settings
+CORS(app, 
+     resources={r"/*": {
+         "origins": ["https://myfarmcare.vercel.app", "http://localhost:5173"],
+         "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+         "allow_headers": ["Content-Type", "Authorization"],
+         "supports_credentials": True,
+         "expose_headers": ["Content-Type", "Authorization"]
+     }})
+
+@app.after_request
+def after_request(response):
+    response.headers.add('Access-Control-Allow-Origin', request.headers.get('Origin', 'https://myfarmcare.vercel.app'))
+    response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization')
+    response.headers.add('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,OPTIONS')
+    response.headers.add('Access-Control-Allow-Credentials', 'true')
+    return response
 
 # MongoDB connection
 try:
