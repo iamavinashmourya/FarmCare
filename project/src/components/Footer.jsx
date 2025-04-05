@@ -7,7 +7,7 @@ const Footer = () => {
         <span>Made with</span>
         <span className="text-green-500">💚</span>
         <span>Love & Powered By</span>
-        <span className="font-semibold">Thoughtful, Mindful, Soulful - Avinash Maurya</span>
+        <span className="font-semibold">Thoughtful, Mindful, Soulful</span>
       </div>
     </footer>
   );
