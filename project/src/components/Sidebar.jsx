@@ -5,7 +5,7 @@ import { useTranslation } from '../hooks/useTranslation';
 import { auth } from '../services/api';
 import LogoutModal from './LogoutModal';
 
-const Sidebar = ({ isOpen, onClose }) => {
+const Sidebar = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, logout, updateUserProfile } = useAuth();
@@ -25,11 +25,12 @@ const Sidebar = ({ isOpen, onClose }) => {
 
   const handleLogoutConfirm = async () => {
     try {
-      await auth.logout();
-      logout();
+      await auth.logout(); // Call backend logout endpoint
+      logout(); // Clear local auth state
       navigate('/login');
     } catch (error) {
       console.error('Logout failed:', error);
+      // Still clear local state and redirect even if backend call fails
       logout();
       navigate('/login');
     }
@@ -120,140 +121,113 @@ const Sidebar = ({ isOpen, onClose }) => {
   ];
 
   if (!user) {
-    return null;
+    return null; // Don't render sidebar until user data is loaded
   }
 
   return (
-    <>
-      <div className={`
-        fixed inset-y-0 left-0 z-40 w-64 bg-white border-r border-gray-200 transform transition-transform duration-300 ease-in-out
-        lg:translate-x-0 lg:static lg:h-screen
-        ${isOpen ? 'translate-x-0' : '-translate-x-full'}
-      `}>
-        {/* Mobile Close Button */}
-        <button
-          onClick={onClose}
-          className="lg:hidden absolute right-4 top-4 text-gray-500 hover:text-gray-700 focus:outline-none"
-        >
-          <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
-          </svg>
-        </button>
-
-        {/* User Profile Section */}
-        <div className="p-4 border-b border-gray-200">
-          <div className="relative group">
-            <div className="flex items-center space-x-3">
-              <div className="relative">
-                <button 
-                  onClick={handleUpdateProfileImage}
-                  className="w-10 h-10 rounded-full overflow-hidden hover:opacity-80 transition-opacity focus:outline-none focus:ring-2 focus:ring-green-500"
-                  title={t('changeProfilePicture')}
-                >
-                  {user.profile_image ? (
-                    <img
-                      src={user.profile_image.url}
-                      alt={user.full_name}
-                      className="w-full h-full object-cover"
-                    />
-                  ) : (
-                    <div className="w-full h-full bg-gray-200 flex items-center justify-center">
-                      <svg className="w-6 h-6 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                      </svg>
-                    </div>
-                  )}
-                </button>
-              </div>
-              <div className="flex-1">
-                <div className="relative group/profile">
-                  <div className="cursor-pointer">
-                    <h3 className="font-medium text-gray-900">{user.full_name}</h3>
-                    <p className="text-sm text-gray-500">{user.email}</p>
+    <div className="w-64 bg-white border-r border-gray-200 flex flex-col h-full">
+      {/* User Profile Section */}
+      <div className="p-4 border-b border-gray-200">
+        <div className="relative group">
+          <div className="flex items-center space-x-3">
+            <div className="relative">
+              <button 
+                onClick={handleUpdateProfileImage}
+                className="w-10 h-10 rounded-full overflow-hidden hover:opacity-80 transition-opacity focus:outline-none focus:ring-2 focus:ring-green-500"
+                title={t('changeProfilePicture')}
+              >
+                {user.profile_image ? (
+                  <img
+                    src={user.profile_image.url}
+                    alt={user.full_name}
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <div className="w-full h-full bg-gray-200 flex items-center justify-center">
+                    <svg className="w-6 h-6 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                    </svg>
                   </div>
-                  
-                  {/* Edit Profile Popup */}
-                  <div className="absolute left-0 top-full mt-1 w-40 opacity-0 invisible group-hover/profile:opacity-100 group-hover/profile:visible transition-all duration-200 z-50">
-                    <div className="bg-white rounded-lg shadow-lg border border-gray-200 py-1">
-                      <Link
-                        to="/dashboard/profile"
-                        onClick={onClose}
-                        className="flex items-center space-x-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
-                      >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-                        </svg>
-                        <span>{t('editProfile')}</span>
-                      </Link>
-                    </div>
+                )}
+              </button>
+            </div>
+            <div className="flex-1">
+              <div className="relative group/profile">
+                <div className="cursor-pointer">
+                  <h3 className="font-medium text-gray-900">{user.full_name}</h3>
+                  <p className="text-sm text-gray-500">{user.email}</p>
+                </div>
+                
+                {/* Edit Profile Popup */}
+                <div className="absolute left-0 top-full mt-1 w-40 opacity-0 invisible group-hover/profile:opacity-100 group-hover/profile:visible transition-all duration-200 z-50">
+                  <div className="bg-white rounded-lg shadow-lg border border-gray-200 py-1">
+                    <Link
+                      to="/dashboard/profile"
+                      className="flex items-center space-x-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                      </svg>
+                      <span>{t('editProfile')}</span>
+                    </Link>
                   </div>
                 </div>
               </div>
             </div>
           </div>
         </div>
+      </div>
 
-        {/* Navigation Menu */}
-        <div className="flex-1 flex flex-col justify-between">
-          <nav className="p-4">
-            <div className="space-y-1">
-              {menuItems.map((item) => (
-                <Link
-                  key={item.title}
-                  to={item.path}
-                  onClick={onClose}
-                  className={`flex items-center space-x-3 px-3 py-2 rounded-lg transition-colors ${
-                    location.pathname === item.path
-                      ? 'bg-green-50 text-green-700'
-                      : 'text-gray-700 hover:bg-gray-50'
-                  }`}
-                >
-                  {item.icon}
-                  <span>{item.title}</span>
-                </Link>
-              ))}
-            </div>
-          </nav>
-
-          {/* Bottom Menu */}
-          <div className="p-4 border-t border-gray-200">
-            <div className="space-y-1">
-              {bottomMenuItems.map((item) => (
-                <Link
-                  key={item.title}
-                  to={item.path}
-                  onClick={onClose}
-                  className={`flex items-center space-x-3 px-3 py-2 rounded-lg transition-colors ${
-                    location.pathname === item.path
-                      ? 'bg-green-50 text-green-700'
-                      : 'text-gray-700 hover:bg-gray-50'
-                  }`}
-                >
-                  {item.icon}
-                  <span>{item.title}</span>
-                </Link>
-              ))}
-              <button
-                onClick={handleLogoutClick}
-                className="w-full flex items-center space-x-3 px-3 py-2 text-gray-700 hover:bg-gray-50 rounded-lg transition-colors"
+      {/* Navigation Menu */}
+      <div className="flex-1 flex flex-col justify-between">
+        <nav className="p-4">
+          <div className="space-y-1">
+            {menuItems.map((item) => (
+              <Link
+                key={item.title}
+                to={item.path}
+                className={`flex items-center space-x-3 px-3 py-2 rounded-lg transition-colors ${
+                  location.pathname === item.path
+                    ? 'bg-green-50 text-green-700'
+                    : 'text-gray-700 hover:bg-gray-50'
+                }`}
               >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-                </svg>
-                <span>{t('logout')}</span>
-              </button>
-            </div>
+                {item.icon}
+                <span>{item.title}</span>
+              </Link>
+            ))}
+          </div>
+        </nav>
+
+        {/* Bottom Menu */}
+        <div className="p-4 border-t border-gray-200">
+          <div className="space-y-1">
+            {bottomMenuItems.map((item) => (
+              <Link
+                key={item.title}
+                to={item.path}
+                className={`flex items-center space-x-3 px-3 py-2 rounded-lg transition-colors ${
+                  location.pathname === item.path
+                    ? 'bg-green-50 text-green-700'
+                    : 'text-gray-700 hover:bg-gray-50'
+                }`}
+              >
+                {item.icon}
+                <span>{item.title}</span>
+              </Link>
+            ))}
+            <button
+              onClick={handleLogoutClick}
+              className="w-full flex items-center space-x-3 px-3 py-2 text-gray-700 hover:bg-gray-50 rounded-lg transition-colors"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+              </svg>
+              <span>{t('logout')}</span>
+            </button>
           </div>
         </div>
       </div>
-
-      {/* Mobile Menu Backdrop */}
-      {isOpen && (
-        <div
-          className="fixed inset-0 bg-gray-600 bg-opacity-50 z-30 lg:hidden"
-          onClick={onClose}
-        />
-      )}
 
       {/* Logout Confirmation Modal */}
       <LogoutModal
@@ -261,33 +235,7 @@ const Sidebar = ({ isOpen, onClose }) => {
         onConfirm={handleLogoutConfirm}
         onCancel={handleLogoutCancel}
       />
-    </>
-  );
-};
-
-export default Sidebar; 
-                <span>{t('logout')}</span>
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Mobile Menu Backdrop */}
-      {isOpen && (
-        <div
-          className="fixed inset-0 bg-gray-600 bg-opacity-50 z-30 lg:hidden"
-          onClick={onClose}
-        />
-      )}
-
-      {/* Logout Confirmation Modal */}
-      <LogoutModal
-        isOpen={showLogoutConfirm}
-        onConfirm={handleLogoutConfirm}
-        onCancel={handleLogoutCancel}
-      />
-    </>
+    </div>
   );
 };
 
