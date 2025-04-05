@@ -55,6 +55,7 @@ try:
         raise ValueError("MONGO_URI environment variable not set")
     client = MongoClient(mongo_uri)
     db = client.get_database('farmcare')
+    blacklist_collection = db.get_collection('token_blacklist')  # Initialize blacklist collection
     logger.info("Connected to MongoDB successfully!")
 except Exception as e:
     logger.error(f"Error connecting to MongoDB: {e}")

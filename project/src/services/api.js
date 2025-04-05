@@ -78,10 +78,23 @@ export const auth = {
     return response.data;
   },
   logout: async () => {
-    const response = await api.post('/user/logout');
-    localStorage.removeItem('token');
-    localStorage.removeItem('userData');
-    return response.data;
+    try {
+      const token = localStorage.getItem('token');
+      const response = await api.post('/user/logout', {}, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      localStorage.removeItem('token');
+      localStorage.removeItem('userData');
+      return response.data;
+    } catch (error) {
+      console.error('Logout error:', error.response?.data || error.message);
+      // Still remove local storage items even if server request fails
+      localStorage.removeItem('token');
+      localStorage.removeItem('userData');
+      throw error;
+    }
   },
   updateProfile: async (data) => {
     try {
