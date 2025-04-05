@@ -21,20 +21,27 @@ from s3_utils import upload_to_s3
 import requests  # Add this at the top with other imports
 import math
 from push_notifications import PushNotification
+from pymongo import MongoClient
+import logging
 
 from auth import hash_password, verify_password, validate_password, validate_email
 
 # Load environment variables
 load_dotenv()
 
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
 app = Flask(__name__)
-# Enable CORS with specific origins and headers
+
+# Configure CORS
 CORS(app, resources={
     r"/*": {
         "origins": [
             "http://localhost:5173",
             "http://127.0.0.1:5173",
-            "https://your-vercel-app.vercel.app"  # Add your Vercel URL here
+            "https://farmcare.vercel.app"  # Add your Vercel app URL
         ],
         "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
         "allow_headers": ["Content-Type", "Authorization"],
@@ -42,30 +49,41 @@ CORS(app, resources={
     }
 })
 
-@app.after_request
-def after_request(response):
-    response.headers.add('Access-Control-Allow-Origin', request.headers.get('Origin', 'http://localhost:5173'))
-    response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization')
-    response.headers.add('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,OPTIONS')
-    response.headers.add('Access-Control-Allow-Credentials', 'true')
-    return response
-
-# Test MongoDB connection
+# MongoDB connection
 try:
-    # Get MongoDB URI from environment
-    mongo_uri = os.getenv("MONGO_URI")
-    if not mongo_uri:
-        raise ValueError("MONGO_URI environment variable not set")
-    
-    # Test if we can list collections
-    db_name = mongo_uri.split('/')[-1].split('?')[0]
-    print(f"Connecting to MongoDB database: {db_name}")
-    print(f"Testing MongoDB connection...")
-    test = users_collection.find_one()
-    print(f"MongoDB connection successful. Found {users_collection.count_documents({})} users")
+    mongo_uri = os.getenv('MONGO_URI')
+    client = MongoClient(mongo_uri)
+    db = client.get_database('farmcare')
+    logger.info("Connected to MongoDB successfully!")
 except Exception as e:
-    print(f"MongoDB connection error: {str(e)}")
+    logger.error(f"Error connecting to MongoDB: {e}")
     raise
+
+# Health check endpoint
+@app.route('/health', methods=['GET'])
+def health_check():
+    try:
+        # Check MongoDB connection
+        client.admin.command('ping')
+        return jsonify({
+            "status": "healthy",
+            "message": "Server is running and database is connected"
+        }), 200
+    except Exception as e:
+        logger.error(f"Health check failed: {e}")
+        return jsonify({
+            "status": "unhealthy",
+            "message": str(e)
+        }), 500
+
+# Error handler
+@app.errorhandler(Exception)
+def handle_error(error):
+    logger.error(f"An error occurred: {error}")
+    return jsonify({
+        "error": str(error),
+        "message": "An internal server error occurred"
+    }), 500
 
 # Set JWT Secret Key
 app.config['SECRET_KEY'] = os.getenv("SECRET_KEY")
@@ -1613,4 +1631,5 @@ def get_analysis_count():
 if __name__ == '__main__':
     if not os.path.exists("uploads"):
         os.makedirs("uploads")
-    app.run(debug=True, port=5000)
+    port = int(os.getenv('PORT', 5000))
+    app.run(host='0.0.0.0', port=port)
