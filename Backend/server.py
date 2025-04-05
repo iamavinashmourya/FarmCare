@@ -42,6 +42,7 @@ CORS(app, resources={
             "http://localhost:5173",
             "http://127.0.0.1:5173",
             "https://farmcare.vercel.app",
+            "https://myfarmcare.vercel.app",
             "https://farmcare-ze9p.onrender.com"
         ],
         "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
