@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
-import axios from 'axios';
+import { weather as weatherApi } from '../services/api';
 
 function Weather() {
   const { token } = useAuth();
@@ -26,13 +26,13 @@ function Weather() {
           };
           setLocation(coords);
           
-          // Get location name using reverse geocoding
           try {
-            const response = await axios.get(
+            const response = await fetch(
               `https://api.openweathermap.org/geo/1.0/reverse?lat=${coords.lat}&lon=${coords.lon}&limit=1&appid=${import.meta.env.VITE_OPENWEATHER_API_KEY}`
             );
-            if (response.data && response.data[0]) {
-              const place = response.data[0];
+            const data = await response.json();
+            if (data && data[0]) {
+              const place = data[0];
               setLocationName(`${place.name}, ${place.state || ''}`);
             }
           } catch (err) {
@@ -40,6 +40,7 @@ function Weather() {
           }
         },
         (error) => {
+          console.error('Geolocation error:', error);
           setError('Unable to retrieve your location. Please enable location services.');
           setLoading(false);
         }
@@ -54,30 +55,24 @@ function Weather() {
       if (!location) return;
 
       try {
-        const response = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/weather`, {
-          params: {
-            lat: location.lat,
-            lon: location.lon
-          },
-          headers: {
-            Authorization: `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          }
-        });
-
-        setWeather(response.data);
-        setLoading(false);
+        setLoading(true);
+        setError(null);
+        console.log('Fetching weather data for:', location);
+        const data = await weatherApi.getWeather(location.lat, location.lon);
+        console.log('Weather data received:', data);
+        setWeather(data);
       } catch (err) {
         console.error('Weather fetch error:', err);
-        setError(err.response?.data?.error || 'Failed to fetch weather data. Please try again later.');
+        setError(err.message || 'Failed to fetch weather data. Please try again later.');
+      } finally {
         setLoading(false);
       }
     };
 
-    if (location && token) {
+    if (location) {
       fetchWeatherData();
     }
-  }, [location, token]);
+  }, [location]);
 
   if (loading) {
     return (
@@ -155,13 +150,13 @@ function Weather() {
           </div>
           <div className="flex justify-between">
             <span className="text-amber-600">Irrigation Need</span>
-            <span className="font-semibold">{weather.agricultural_metrics.ideal_irrigation}</span>
+            <span className="font-semibold">{weather.agricultural_metrics.irrigation_need}</span>
           </div>
         </div>
       </div>
 
       {/* Forecast */}
-      <div className="bg-white rounded-lg shadow-sm p-4 mb-4">
+      <div className="bg-white rounded-lg shadow-sm p-4">
         <h3 className="text-sm font-semibold text-gray-800 mb-3">24-Hour Forecast</h3>
         <div className="space-y-3">
           {weather.forecast.slice(0, 4).map((item, index) => (
@@ -177,23 +172,6 @@ function Weather() {
             </div>
           ))}
         </div>
-      </div>
-
-      {/* Farming Advice */}
-      <div className="bg-white rounded-lg shadow-sm p-4">
-        <h3 className="text-sm font-semibold text-gray-800 mb-3">Farming Advice</h3>
-        <div className="text-sm text-gray-600 mb-3">{weather.farming_advice.risk_indicator}</div>
-        <div className="text-sm text-gray-600 mb-3">{weather.farming_advice.weather_summary}</div>
-        <ul className="space-y-2">
-          {weather.farming_advice.recommendations.map((advice, index) => (
-            <li key={index} className="flex items-start space-x-2 text-sm">
-              <svg className="w-4 h-4 text-blue-600 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-              <span className="text-gray-700">{advice}</span>
-            </li>
-          ))}
-        </ul>
       </div>
     </div>
   );

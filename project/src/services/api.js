@@ -482,7 +482,6 @@ export const weather = {
       });
       return response.data;
     } catch (error) {
-      console.error('Weather fetch error:', error);
       if (error.response) {
         // The request was made and the server responded with a status code
         // that falls out of the range of 2xx
@@ -492,7 +491,7 @@ export const weather = {
         throw new Error('No response from weather service. Please try again.');
       } else {
         // Something happened in setting up the request that triggered an Error
-        throw new Error('Error setting up weather request');
+        throw new Error('Error fetching weather data: ' + error.message);
       }
     }
   }
