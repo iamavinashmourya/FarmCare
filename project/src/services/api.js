@@ -112,6 +112,7 @@ export const diseaseDetection = {
         headers: {
           'Content-Type': 'multipart/form-data',
         },
+        timeout: 30000, // 30 second timeout
       });
 
       if (!response.data) {
@@ -122,11 +123,11 @@ export const diseaseDetection = {
     } catch (error) {
       console.error('Error in uploadImage:', error);
       if (error.response) {
-        throw new Error(error.response.data.message || 'Server error');
+        throw new Error(error.response.data.error || 'Server error');
       } else if (error.request) {
-        throw new Error('No response from server. Please check if the server is running.');
+        throw new Error('No response from server. Please check your internet connection.');
       } else {
-        throw new Error('Error setting up the request');
+        throw new Error('Error uploading image. Please try again.');
       }
     }
   },

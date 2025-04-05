@@ -41,17 +41,8 @@ CORS(app,
          "origins": ["https://myfarmcare.vercel.app", "http://localhost:5173"],
          "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
          "allow_headers": ["Content-Type", "Authorization"],
-         "supports_credentials": True,
-         "expose_headers": ["Content-Type", "Authorization"]
+         "supports_credentials": True
      }})
-
-@app.after_request
-def after_request(response):
-    response.headers.add('Access-Control-Allow-Origin', request.headers.get('Origin', 'https://myfarmcare.vercel.app'))
-    response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization')
-    response.headers.add('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,OPTIONS')
-    response.headers.add('Access-Control-Allow-Credentials', 'true')
-    return response
 
 # MongoDB connection
 try:
@@ -798,24 +789,54 @@ def create_price_route():
 @user_or_admin_required
 def upload_image():
     """Upload an image and process it with Gemini AI (User Access)"""
-    if 'file' not in request.files:
-        return jsonify({"error": "No file uploaded"}), 400
-    
-    file = request.files['file']
-    if file.filename == '':
-        return jsonify({"error": "No selected file"}), 400
-        
-    file_path = os.path.join("uploads", file.filename)
-    file.save(file_path)  # Save the uploaded file
-
     try:
-        response_text = generate_gemini_response(input_prompt, file_path)
-        return jsonify({
-            "file_path": file_path, 
-            "analysis": response_text,
-            "user_id": request.user["user_id"]
-        }), 200
+        print("Received upload request")
+        if 'file' not in request.files:
+            print("No file in request")
+            return jsonify({"error": "No file uploaded"}), 400
+        
+        file = request.files['file']
+        if file.filename == '':
+            print("Empty filename")
+            return jsonify({"error": "No selected file"}), 400
+            
+        # Validate file type
+        allowed_extensions = {'jpg', 'jpeg', 'png', 'gif', 'webp'}
+        if '.' not in file.filename or \
+           file.filename.rsplit('.', 1)[1].lower() not in allowed_extensions:
+            print(f"Invalid file type: {file.filename}")
+            return jsonify({"error": "Invalid file type. Allowed types: JPG, JPEG, PNG, GIF, WEBP"}), 400
+
+        # Create uploads directory if it doesn't exist
+        if not os.path.exists("uploads"):
+            os.makedirs("uploads")
+
+        file_path = os.path.join("uploads", file.filename)
+        file.save(file_path)  # Save the uploaded file
+        print(f"File saved to {file_path}")
+
+        try:
+            response_text = generate_gemini_response(input_prompt, file_path)
+            result = {
+                "file_path": file_path, 
+                "analysis": response_text,
+                "user_id": request.user["user_id"]
+            }
+            print("Analysis completed successfully")
+            return jsonify(result), 200
+        except Exception as e:
+            print(f"Error in analysis: {str(e)}")
+            return jsonify({"error": f"Analysis failed: {str(e)}"}), 500
+        finally:
+            # Clean up the uploaded file
+            try:
+                os.remove(file_path)
+                print(f"Cleaned up file {file_path}")
+            except Exception as e:
+                print(f"Error cleaning up file: {str(e)}")
+
     except Exception as e:
+        print(f"Upload error: {str(e)}")
         return jsonify({"error": str(e)}), 500
 
 # Admin Routes (Requires Admin Authentication)
