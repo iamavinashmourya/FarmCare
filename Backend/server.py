@@ -23,6 +23,8 @@ import math
 from push_notifications import PushNotification
 from pymongo import MongoClient
 import logging
+import re
+from werkzeug.security import generate_password_hash
 
 from auth import hash_password, verify_password, validate_password, validate_email
 
@@ -248,38 +250,126 @@ def user_or_admin_required(f):
         return f(*args, **kwargs)
     return decorated
 
+# Dictionary of Indian states and their regions/cities
+INDIAN_STATES_AND_REGIONS = {
+    'Andhra Pradesh': ['Visakhapatnam', 'Vijayawada', 'Guntur', 'Nellore', 'Kurnool', 'Rajahmundry', 'Tirupati'],
+    'Arunachal Pradesh': ['Itanagar', 'Naharlagun', 'Pasighat', 'Tawang', 'Ziro'],
+    'Assam': ['Guwahati', 'Silchar', 'Dibrugarh', 'Jorhat', 'Nagaon', 'Tinsukia'],
+    'Bihar': ['Patna', 'Gaya', 'Bhagalpur', 'Muzaffarpur', 'Darbhanga', 'Purnia'],
+    'Chhattisgarh': ['Raipur', 'Bhilai', 'Bilaspur', 'Korba', 'Raigarh', 'Durg'],
+    'Goa': ['Panaji', 'Margao', 'Vasco da Gama', 'Mapusa', 'Ponda'],
+    'Gujarat': ['Ahmedabad', 'Surat', 'Vadodara', 'Rajkot', 'Bhavnagar', 'Jamnagar'],
+    'Haryana': ['Gurugram', 'Faridabad', 'Panipat', 'Ambala', 'Karnal', 'Hisar'],
+    'Himachal Pradesh': ['Shimla', 'Manali', 'Dharamshala', 'Kullu', 'Mandi', 'Solan'],
+    'Jharkhand': ['Ranchi', 'Jamshedpur', 'Dhanbad', 'Bokaro', 'Hazaribagh', 'Deoghar'],
+    'Karnataka': ['Bengaluru', 'Mysuru', 'Hubballi', 'Mangaluru', 'Belagavi', 'Kalaburagi'],
+    'Kerala': ['Thiruvananthapuram', 'Kochi', 'Kozhikode', 'Thrissur', 'Kollam', 'Palakkad'],
+    'Madhya Pradesh': ['Bhopal', 'Indore', 'Jabalpur', 'Gwalior', 'Ujjain', 'Sagar'],
+    'Maharashtra': ['Mumbai', 'Pune', 'Nagpur', 'Nashik', 'Aurangabad', 'Solapur'],
+    'Manipur': ['Imphal', 'Thoubal', 'Kakching', 'Ukhrul', 'Churachandpur'],
+    'Meghalaya': ['Shillong', 'Tura', 'Jowai', 'Nongpoh', 'Williamnagar'],
+    'Mizoram': ['Aizawl', 'Lunglei', 'Champhai', 'Kolasib', 'Serchhip'],
+    'Nagaland': ['Kohima', 'Dimapur', 'Mokokchung', 'Tuensang', 'Wokha'],
+    'Odisha': ['Bhubaneswar', 'Cuttack', 'Rourkela', 'Berhampur', 'Sambalpur', 'Puri'],
+    'Punjab': ['Chandigarh', 'Ludhiana', 'Amritsar', 'Jalandhar', 'Patiala', 'Bathinda'],
+    'Rajasthan': ['Jaipur', 'Jodhpur', 'Udaipur', 'Kota', 'Ajmer', 'Bikaner'],
+    'Sikkim': ['Gangtok', 'Namchi', 'Gyalshing', 'Mangan', 'Rangpo'],
+    'Tamil Nadu': ['Chennai', 'Coimbatore', 'Madurai', 'Salem', 'Tiruchirappalli', 'Tirunelveli'],
+    'Telangana': ['Hyderabad', 'Warangal', 'Nizamabad', 'Karimnagar', 'Khammam', 'Ramagundam'],
+    'Tripura': ['Agartala', 'Udaipur', 'Dharmanagar', 'Kailasahar', 'Belonia'],
+    'Uttar Pradesh': ['Lucknow', 'Kanpur', 'Varanasi', 'Agra', 'Prayagraj', 'Meerut'],
+    'Uttarakhand': ['Dehradun', 'Haridwar', 'Rishikesh', 'Nainital', 'Mussoorie', 'Haldwani'],
+    'West Bengal': ['Kolkata', 'Howrah', 'Durgapur', 'Asansol', 'Siliguri', 'Darjeeling'],
+    'Delhi': ['New Delhi', 'North Delhi', 'South Delhi', 'East Delhi', 'West Delhi'],
+    'Jammu and Kashmir': ['Srinagar', 'Jammu', 'Anantnag', 'Baramulla', 'Udhampur', 'Leh'],
+    'Ladakh': ['Leh', 'Kargil', 'Diskit', 'Zanskar', 'Nubra'],
+    'Puducherry': ['Puducherry', 'Karaikal', 'Mahe', 'Yanam'],
+    'Andaman and Nicobar Islands': ['Port Blair', 'Car Nicobar', 'Havelock', 'Diglipur'],
+    'Chandigarh': ['Chandigarh'],
+    'Dadra and Nagar Haveli and Daman and Diu': ['Daman', 'Diu', 'Silvassa'],
+    'Lakshadweep': ['Kavaratti', 'Agatti', 'Amini', 'Andrott']
+}
+
 @app.route('/user/register', methods=['POST'])
 def user_register():
     """Register a new regular user"""
+    try:
     data = request.get_json()
-    full_name = data.get("full_name")
-    email = data.get("email")
-    mobile = data.get("mobile")
-    password = data.get("password")
-    state = data.get("state")
-    region = data.get("region")
+        
+        # Check if data is None
+        if not data:
+            return jsonify({"error": "No data provided"}), 400
 
-    if not all([full_name, email, mobile, password, state, region]):
-        return jsonify({"error": "All fields are required"}), 400
+        # Required fields with validation
+        required_fields = {
+            'full_name': 'Full Name',
+            'email': 'Email',
+            'mobile': 'Mobile Number',
+            'password': 'Password',
+            'state': 'State',
+            'region': 'City'
+        }
 
-    # Validate password strength
-    is_valid_password, password_error = validate_password(password)
-    if not is_valid_password:
-        return jsonify({"error": password_error}), 400
+        # Check for missing fields
+        missing_fields = []
+        for field, label in required_fields.items():
+            if not data.get(field):
+                missing_fields.append(label)
 
-    # Validate email format
-    is_valid_email, email_error = validate_email(email)
-    if not is_valid_email:
-        return jsonify({"error": email_error}), 400
+        if missing_fields:
+            return jsonify({
+                "error": "All fields are required",
+                "missing_fields": missing_fields
+            }), 400
 
-    if get_user_by_email_or_mobile(email, mobile):
-        return jsonify({"error": "User already exists"}), 400
+        # Validate full name (at least two words)
+        name_parts = data['full_name'].strip().split()
+        if len(name_parts) < 2:
+            return jsonify({"error": "Please enter your full name (first name and last name)"}), 400
 
-    hashed_password = hash_password(password)
-    # Create regular user (is_admin=False by default)
-    create_user(full_name, email, mobile, hashed_password, is_admin=False, state=state, region=region)
+        # Validate mobile number (exactly 10 digits)
+        if not re.match(r'^\d{10}$', data['mobile']):
+            return jsonify({"error": "Please enter a valid 10-digit mobile number"}), 400
 
-    return jsonify({"message": "User registered successfully"}), 201
+        # Validate email format
+        if not re.match(r'^[^\s@]+@[^\s@]+\.[^\s@]+$', data['email']):
+            return jsonify({"error": "Please enter a valid email address"}), 400
+
+        # Validate password length
+        if len(data['password']) < 8:
+            return jsonify({"error": "Password must be at least 8 characters long"}), 400
+
+        # Validate state and region
+        if data['state'] not in INDIAN_STATES_AND_REGIONS:
+            return jsonify({"error": "Invalid state selected"}), 400
+
+        if data['region'] not in INDIAN_STATES_AND_REGIONS[data['state']]:
+            return jsonify({"error": "Selected city does not belong to the selected state"}), 400
+
+        # Check if user already exists
+        existing_user = get_user_by_email_or_mobile(data['email'], data['mobile'])
+        
+        if existing_user:
+            if existing_user.get('email') == data['email']:
+                return jsonify({"error": "Email already registered"}), 400
+            else:
+                return jsonify({"error": "Mobile number already registered"}), 400
+
+        # Create user with hashed password
+        hashed_password = hash_password(data['password'])
+        create_user(data['full_name'], data['email'], data['mobile'], hashed_password, is_admin=False, state=data['state'], region=data['region'])
+
+        return jsonify({
+            "message": "Registration successful! You can now login.",
+            "status": "success"
+        }), 201
+
+    except Exception as e:
+        logger.error(f"Registration error: {str(e)}")
+        return jsonify({
+            "error": "Registration failed. Please try again.",
+            "details": str(e)
+        }), 500
 
 @app.route('/user/login', methods=['POST'])
 def user_login():
@@ -680,8 +770,8 @@ def get_schemes_route():
 def get_prices_route():
     """Get all prices, optionally filtered by state and region (Public Access)"""
     try:
-        state = request.args.get('state')
-        region = request.args.get('region')
+    state = request.args.get('state')
+    region = request.args.get('region')
         prices = get_prices(state, region)
         
         # Add trend and change calculation for each price
@@ -791,14 +881,14 @@ def upload_image():
     """Upload an image and process it with Gemini AI (User Access)"""
     try:
         print("Received upload request")
-        if 'file' not in request.files:
+    if 'file' not in request.files:
             print("No file in request")
-            return jsonify({"error": "No file uploaded"}), 400
-        
-        file = request.files['file']
-        if file.filename == '':
+        return jsonify({"error": "No file uploaded"}), 400
+    
+    file = request.files['file']
+    if file.filename == '':
             print("Empty filename")
-            return jsonify({"error": "No selected file"}), 400
+        return jsonify({"error": "No selected file"}), 400
             
         # Validate file type
         allowed_extensions = {'jpg', 'jpeg', 'png', 'gif', 'webp'}
@@ -810,21 +900,21 @@ def upload_image():
         # Create uploads directory if it doesn't exist
         if not os.path.exists("uploads"):
             os.makedirs("uploads")
-
-        file_path = os.path.join("uploads", file.filename)
-        file.save(file_path)  # Save the uploaded file
+        
+    file_path = os.path.join("uploads", file.filename)
+    file.save(file_path)  # Save the uploaded file
         print(f"File saved to {file_path}")
 
-        try:
-            response_text = generate_gemini_response(input_prompt, file_path)
+    try:
+        response_text = generate_gemini_response(input_prompt, file_path)
             result = {
-                "file_path": file_path, 
-                "analysis": response_text,
-                "user_id": request.user["user_id"]
+            "file_path": file_path, 
+            "analysis": response_text,
+            "user_id": request.user["user_id"]
             }
             print("Analysis completed successfully")
             return jsonify(result), 200
-        except Exception as e:
+    except Exception as e:
             print(f"Error in analysis: {str(e)}")
             return jsonify({"error": f"Analysis failed: {str(e)}"}), 500
         finally:
@@ -1707,6 +1797,40 @@ def get_analysis_count():
     except Exception as e:
         print(f"Error getting analysis count: {str(e)}")  # Debug log
         return jsonify({"error": str(e)}), 500
+
+@app.route('/api/states', methods=['GET'])
+def get_states():
+    """Get list of all Indian states"""
+    try:
+        states = list(INDIAN_STATES_AND_REGIONS.keys())
+        return jsonify({
+            "states": states,
+            "count": len(states)
+        }), 200
+    except Exception as e:
+        logger.error(f"Error fetching states: {str(e)}")
+        return jsonify({"error": "Failed to fetch states"}), 500
+
+@app.route('/api/regions', methods=['GET'])
+def get_regions():
+    """Get regions for a specific state"""
+    try:
+        state = request.args.get('state')
+        if not state:
+            return jsonify({"error": "State parameter is required"}), 400
+
+        regions = INDIAN_STATES_AND_REGIONS.get(state)
+        if not regions:
+            return jsonify({"error": f"No regions found for state: {state}"}), 404
+
+        return jsonify({
+            "state": state,
+            "regions": regions,
+            "count": len(regions)
+        }), 200
+    except Exception as e:
+        logger.error(f"Error fetching regions: {str(e)}")
+        return jsonify({"error": "Failed to fetch regions"}), 500
 
 if __name__ == '__main__':
     if not os.path.exists("uploads"):

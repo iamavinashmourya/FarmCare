@@ -6,6 +6,7 @@ import { useAuth } from '../context/AuthContext';
 import { FaEye, FaEyeSlash } from 'react-icons/fa';
 import { FaTractor, FaLeaf, FaSeedling } from 'react-icons/fa';
 import { GiWheat, GiFarmTractor, GiPlantWatering, GiCorn } from 'react-icons/gi';
+import { indianStates, indianCities } from '../utils/indianStates';
 
 function Register() {
   const navigate = useNavigate();
@@ -28,6 +29,39 @@ function Register() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    
+    // Validate full name (at least two words)
+    const nameWords = formData.fullName.trim().split(/\s+/);
+    if (nameWords.length < 2) {
+      toast.error('Please enter your full name (first name and last name)');
+      return;
+    }
+
+    // Validate mobile number (exactly 10 digits)
+    if (!/^\d{10}$/.test(formData.mobile)) {
+      toast.error('Please enter a valid 10-digit mobile number');
+      return;
+    }
+
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(formData.email)) {
+      toast.error('Please enter a valid email address');
+      return;
+    }
+
+    // Validate password (minimum 8 characters)
+    if (formData.password.length < 8) {
+      toast.error('Password must be at least 8 characters long');
+      return;
+    }
+
+    // Validate state and region selection
+    if (!formData.state || !formData.region) {
+      toast.error('Please select both state and city');
+      return;
+    }
+
     try {
       await auth.register(formData);
       toast.success('Registration successful! Please login.');
@@ -40,6 +74,9 @@ function Register() {
   const togglePasswordVisibility = () => {
     setShowPassword(!showPassword);
   };
+
+  // Get available regions based on selected state
+  const availableRegions = formData.state ? indianCities[formData.state] || [] : [];
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-green-50 to-green-100 relative overflow-hidden">
@@ -183,20 +220,25 @@ function Register() {
                     name="state"
                     required
                     value={formData.state}
-                    onChange={(e) => setFormData({ ...formData, state: e.target.value })}
+                    onChange={(e) => {
+                      setFormData({ 
+                        ...formData, 
+                        state: e.target.value,
+                        region: '' // Reset region when state changes
+                      });
+                    }}
                     className="mt-1 block w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-1 focus:ring-green-500 focus:border-green-500 outline-none transition-colors"
                   >
                     <option value="">Select State</option>
-                    <option value="maharashtra">Maharashtra</option>
-                    <option value="gujarat">Gujarat</option>
-                    <option value="karnataka">Karnataka</option>
-                    {/* Add more states as needed */}
+                    {indianStates.map(state => (
+                      <option key={state} value={state}>{state}</option>
+                    ))}
                   </select>
                 </div>
 
                 <div>
                   <label htmlFor="region" className="block text-sm font-medium text-gray-700">
-                    Region/City
+                    City
                   </label>
                   <select
                     id="region"
@@ -205,12 +247,12 @@ function Register() {
                     value={formData.region}
                     onChange={(e) => setFormData({ ...formData, region: e.target.value })}
                     className="mt-1 block w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-1 focus:ring-green-500 focus:border-green-500 outline-none transition-colors"
+                    disabled={!formData.state}
                   >
-                    <option value="">Select Region</option>
-                    <option value="mumbai">Mumbai</option>
-                    <option value="pune">Pune</option>
-                    <option value="nagpur">Nagpur</option>
-                    {/* Add more regions as needed */}
+                    <option value="">Select City</option>
+                    {availableRegions.map(city => (
+                      <option key={city} value={city}>{city}</option>
+                    ))}
                   </select>
                 </div>
               </div>
