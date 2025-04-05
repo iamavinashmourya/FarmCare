@@ -23,8 +23,7 @@ api.interceptors.request.use(
     return config;
   },
   (error) => {
-    console.error('Request error:', error);
-    return Promise.reject(error);
+    return Promise.reject(new Error('Request failed'));
   }
 );
 
@@ -32,23 +31,26 @@ api.interceptors.request.use(
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    console.error('API Error:', error.response?.data || error.message);
     if (error.response?.status === 401) {
       localStorage.removeItem('token');
       localStorage.removeItem('userData');
       window.location.href = '/login';
     }
-    return Promise.reject(error);
+    // Don't log error details, return a generic error message
+    return Promise.reject(new Error(error.response?.data?.message || 'Operation failed'));
   }
 );
 
 export const auth = {
   login: async (loginId, password) => {
-    const response = await api.post('/user/login', { login_id: loginId, password });
-    return response.data;
+    try {
+      const response = await api.post('/user/login', { login_id: loginId, password });
+      return response.data;
+    } catch (error) {
+      throw new Error('Login failed. Please check your credentials.');
+    }
   },
   register: async (userData) => {
-    // Format the data to match backend expectations
     const formattedData = {
       full_name: userData.fullName,
       email: userData.email,
@@ -62,11 +64,7 @@ export const auth = {
       const response = await api.post('/user/register', formattedData);
       return response.data;
     } catch (error) {
-      console.error('Registration error:', error.response?.data || error.message);
-      if (error.response?.data?.error) {
-        throw new Error(error.response.data.error);
-      }
-      throw new Error('Registration failed. Please try again.');
+      throw new Error(error.response?.data?.message || 'Registration failed. Please try again.');
     }
   },
   adminLogin: async (loginId, password) => {
@@ -89,24 +87,18 @@ export const auth = {
       localStorage.removeItem('userData');
       return response.data;
     } catch (error) {
-      console.error('Logout error:', error.response?.data || error.message);
       // Still remove local storage items even if server request fails
       localStorage.removeItem('token');
       localStorage.removeItem('userData');
-      throw error;
+      throw new Error('Logout failed');
     }
   },
   updateProfile: async (data) => {
     try {
-      const response = await api.put('/user/profile', data, {
-        headers: {
-          'Content-Type': 'application/json'
-        }
-      });
+      const response = await api.put('/user/profile', data);
       return response.data;
     } catch (error) {
-      console.error('Profile update error:', error.response?.data || error.message);
-      throw error;
+      throw new Error('Profile update failed');
     }
   },
   updateProfileImage: async (formData) => {
@@ -118,8 +110,7 @@ export const auth = {
       });
       return response.data;
     } catch (error) {
-      console.error('Profile image update error:', error.response?.data || error.message);
-      throw error;
+      throw new Error('Profile image update failed');
     }
   },
   getProfile: async () => {
@@ -127,8 +118,7 @@ export const auth = {
       const response = await api.get('/user/profile');
       return response.data;
     } catch (error) {
-      console.error('Get profile error:', error.response?.data || error.message);
-      throw error;
+      throw new Error('Failed to load profile');
     }
   }
 };

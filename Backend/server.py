@@ -32,7 +32,14 @@ from auth import hash_password, verify_password, validate_password, validate_ema
 load_dotenv()
 
 # Configure logging
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.FileHandler('app.log'),
+        logging.StreamHandler()
+    ]
+)
 logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
@@ -101,33 +108,36 @@ def health_check():
             "message": str(e)
         }), 500
 
+# Secure error response function
+def create_error_response(error_type, message=None, status_code=400):
+    """Create a secure error response without exposing sensitive details"""
+    error_messages = {
+        'auth': 'Authentication failed',
+        'validation': 'Invalid input data',
+        'not_found': 'Resource not found',
+        'server': 'Internal server error',
+        'permission': 'Permission denied'
+    }
+    return jsonify({
+        "error": error_messages.get(error_type, 'Operation failed'),
+        "message": message if message else error_messages.get(error_type, 'Operation failed')
+    }), status_code
+
 # Error handlers
 @app.errorhandler(404)
 def not_found_error(error):
-    logger.warning(f"Route not found: {request.url}")
-    return jsonify({
-        "error": "Not Found",
-        "message": "The requested URL was not found on the server",
-        "status": 404
-    }), 404
+    logger.warning(f"Route not found: {request.path}")
+    return create_error_response('not_found', status_code=404)
 
 @app.errorhandler(500)
 def internal_error(error):
-    logger.error(f"Internal server error: {error}")
-    return jsonify({
-        "error": "Internal Server Error",
-        "message": "An internal server error occurred",
-        "status": 500
-    }), 500
+    logger.error("Internal server error occurred", exc_info=True)
+    return create_error_response('server', status_code=500)
 
 @app.errorhandler(Exception)
-def handle_error(error):
-    logger.error(f"An error occurred: {error}")
-    return jsonify({
-        "error": str(error.__class__.__name__),
-        "message": str(error),
-        "status": 500
-    }), 500
+def handle_exception(error):
+    logger.error("An unexpected error occurred", exc_info=True)
+    return create_error_response('server', status_code=500)
 
 # Set JWT Secret Key
 app.config['SECRET_KEY'] = os.getenv("SECRET_KEY")
@@ -218,18 +228,17 @@ def token_required(f):
     def decorated(*args, **kwargs):
         token_header = request.headers.get("Authorization")
         if not token_header or not token_header.startswith("Bearer "):
-            return jsonify({"error": "Token is missing or invalid"}), 401
+            return create_error_response('auth', 'Invalid or missing token', 401)
 
-        token = token_header.split(" ")[1]  # Extract actual token
+        token = token_header.split(" ")[1]
         
         try:
             decoded_data = jwt.decode(token, app.config['SECRET_KEY'], algorithms=["HS256"])
-            request.user = decoded_data  # Attach user data to request
-            print(f"Decoded Token: {decoded_data}")  # Debugging
+            request.user = decoded_data
         except jwt.ExpiredSignatureError:
-            return jsonify({"error": "Token expired"}), 401
+            return create_error_response('auth', 'Token has expired', 401)
         except jwt.InvalidTokenError:
-            return jsonify({"error": "Invalid token"}), 401
+            return create_error_response('auth', 'Invalid token', 401)
         
         return f(*args, **kwargs)
     return decorated
@@ -240,7 +249,7 @@ def admin_required(f):
     @token_required
     def decorated(*args, **kwargs):
         if not request.user.get("is_admin"):
-            return jsonify({"error": "Admin privileges required"}), 403
+            return create_error_response('permission', 'Admin privileges required', 403)
         return f(*args, **kwargs)
     return decorated
 
@@ -394,15 +403,12 @@ def user_login():
 def user_logout():
     """Handle user logout"""
     try:
-        # Get the token from the request
         token = request.headers.get('Authorization').split(' ')[1]
-        
-        # Add token to blacklist in database
         blacklist_token(token)
-        
         return jsonify({"message": "Logged out successfully"}), 200
     except Exception as e:
-        return jsonify({"error": "Logout failed"}), 400
+        logger.error("Logout failed", exc_info=True)
+        return create_error_response('auth', 'Logout failed')
 
 def blacklist_token(token):
     """Add token to blacklist collection"""
@@ -412,20 +418,19 @@ def blacklist_token(token):
             "created_at": datetime.datetime.utcnow()
         })
     except Exception as e:
-        print(f"Error blacklisting token: {e}")
+        logger.error("Error blacklisting token", exc_info=True)
         raise
 
 @app.before_request
 def verify_token_not_blacklisted():
     """Check if token is blacklisted before processing request"""
-    if request.endpoint and request.endpoint != 'user_login' and request.endpoint != 'user_register':
+    if request.endpoint and request.endpoint not in ['user_login', 'user_register']:
         auth_header = request.headers.get('Authorization')
         if auth_header:
             try:
                 token = auth_header.split(' ')[1]
-                # Check if token is blacklisted
                 if blacklist_collection.find_one({"token": token}):
-                    return jsonify({"error": "Token has been revoked"}), 401
+                    return create_error_response('auth', 'Token has been revoked', 401)
             except:
                 pass
 
