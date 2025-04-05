@@ -41,7 +41,8 @@ CORS(app, resources={
         "origins": [
             "http://localhost:5173",
             "http://127.0.0.1:5173",
-            "https://farmcare.vercel.app"  # Add your Vercel app URL
+            "https://farmcare.vercel.app",
+            "https://farmcare-ze9p.onrender.com"
         ],
         "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
         "allow_headers": ["Content-Type", "Authorization"],
