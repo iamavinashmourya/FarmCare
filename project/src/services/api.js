@@ -1,25 +1,32 @@
 import axios from 'axios';
 
 // Use a constant for the API base URL
-const BASE_URL = 'http://127.0.0.1:5000';
+const BASE_URL = process.env.NODE_ENV === 'production' 
+  ? 'https://farmcare-ze9p.onrender.com'
+  : 'http://127.0.0.1:5000';
 
 const api = axios.create({
   baseURL: BASE_URL,
   headers: {
     'Content-Type': 'application/json',
   },
-  // Add CORS settings
   withCredentials: true,
 });
 
-// Add request interceptor to include auth token
-api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('token');
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
+// Add request interceptor to include auth token and handle errors
+api.interceptors.request.use(
+  (config) => {
+    const token = localStorage.getItem('token');
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+  },
+  (error) => {
+    console.error('Request error:', error);
+    return Promise.reject(error);
   }
-  return config;
-});
+);
 
 // Add response interceptor to handle errors
 api.interceptors.response.use(
@@ -28,6 +35,7 @@ api.interceptors.response.use(
     console.error('API Error:', error.response?.data || error.message);
     if (error.response?.status === 401) {
       localStorage.removeItem('token');
+      localStorage.removeItem('userData');
       window.location.href = '/login';
     }
     return Promise.reject(error);
