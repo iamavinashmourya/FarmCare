@@ -11,6 +11,10 @@ const api = axios.create({
     'Content-Type': 'application/json',
   },
   withCredentials: true,
+  credentials: 'include',
+  validateStatus: function (status) {
+    return status >= 200 && status < 500;
+  }
 });
 
 // Add request interceptor to include auth token and handle errors
