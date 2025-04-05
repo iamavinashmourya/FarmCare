@@ -48,8 +48,25 @@ export const auth = {
     return response.data;
   },
   register: async (userData) => {
-    const response = await api.post('/user/register', userData);
-    return response.data;
+    // Format the data to match backend expectations
+    const formattedData = {
+      full_name: userData.fullName,
+      email: userData.email,
+      mobile: userData.mobile,
+      password: userData.password,
+      state: userData.state,
+      region: userData.region
+    };
+    
+    try {
+      const response = await api.post('/user/register', formattedData);
+      return response.data;
+    } catch (error) {
+      if (error.response?.data?.error) {
+        throw new Error(error.response.data.error);
+      }
+      throw error;
+    }
   },
   adminLogin: async (loginId, password) => {
     const response = await api.post('/admin/login', { login_id: loginId, password });

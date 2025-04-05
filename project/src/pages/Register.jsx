@@ -12,6 +12,7 @@ function Register() {
   const navigate = useNavigate();
   const { isAuthenticated } = useAuth();
   const [showPassword, setShowPassword] = useState(false);
+  const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     fullName: '',
     email: '',
@@ -27,47 +28,64 @@ function Register() {
     }
   }, [isAuthenticated, navigate]);
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    
+  const validateForm = () => {
     // Validate full name (at least two words)
     const nameWords = formData.fullName.trim().split(/\s+/);
     if (nameWords.length < 2) {
       toast.error('Please enter your full name (first name and last name)');
-      return;
+      return false;
     }
 
     // Validate mobile number (exactly 10 digits)
     if (!/^\d{10}$/.test(formData.mobile)) {
       toast.error('Please enter a valid 10-digit mobile number');
-      return;
+      return false;
     }
 
     // Validate email format
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(formData.email)) {
       toast.error('Please enter a valid email address');
-      return;
+      return false;
     }
 
     // Validate password (minimum 8 characters)
     if (formData.password.length < 8) {
       toast.error('Password must be at least 8 characters long');
-      return;
+      return false;
     }
 
     // Validate state and region selection
-    if (!formData.state || !formData.region) {
-      toast.error('Please select both state and city');
+    if (!formData.state) {
+      toast.error('Please select a state');
+      return false;
+    }
+
+    if (!formData.region) {
+      toast.error('Please select a city');
+      return false;
+    }
+
+    return true;
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    
+    if (!validateForm()) {
       return;
     }
 
     try {
+      setLoading(true);
       await auth.register(formData);
       toast.success('Registration successful! Please login.');
       navigate('/login');
     } catch (error) {
-      toast.error(error.response?.data?.error || 'Registration failed');
+      console.error('Registration error:', error);
+      toast.error(error.message || 'Registration failed. Please try again.');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -172,7 +190,10 @@ function Register() {
                     type="tel"
                     required
                     value={formData.mobile}
-                    onChange={(e) => setFormData({ ...formData, mobile: e.target.value })}
+                    onChange={(e) => {
+                      const value = e.target.value.replace(/\D/g, '').slice(0, 10);
+                      setFormData({ ...formData, mobile: value });
+                    }}
                     className="block w-full px-4 py-3 border border-gray-300 rounded-r-lg focus:ring-1 focus:ring-green-500 focus:border-green-500 outline-none transition-colors"
                     placeholder="Enter 10 digit number"
                     maxLength="10"
@@ -195,6 +216,7 @@ function Register() {
                     onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                     className="block w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-1 focus:ring-green-500 focus:border-green-500 outline-none transition-colors"
                     placeholder="Create a password"
+                    minLength="8"
                   />
                   <button
                     type="button"
@@ -259,9 +281,24 @@ function Register() {
 
               <button
                 type="submit"
-                className="w-full flex justify-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-colors"
+                disabled={loading}
+                className={`w-full flex justify-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white ${
+                  loading 
+                    ? 'bg-green-400 cursor-not-allowed' 
+                    : 'bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500'
+                } transition-colors`}
               >
-                Register
+                {loading ? (
+                  <>
+                    <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    Registering...
+                  </>
+                ) : (
+                  'Register'
+                )}
               </button>
             </form>
 
