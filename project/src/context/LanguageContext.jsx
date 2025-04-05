@@ -16,11 +16,17 @@ export const languages = {
 };
 
 export function LanguageProvider({ children }) {
-  const [currentLanguage, setCurrentLanguage] = useState('hi');
+  const [currentLanguage, setCurrentLanguage] = useState(() => {
+    // Try to get language from localStorage, default to 'en' if not found
+    return localStorage.getItem('userLanguage') || 'en';
+  });
 
   const value = {
     currentLanguage,
-    setCurrentLanguage,
+    setCurrentLanguage: (lang) => {
+      localStorage.setItem('userLanguage', lang);
+      setCurrentLanguage(lang);
+    },
     languages
   };
 
