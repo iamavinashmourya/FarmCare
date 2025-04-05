@@ -58,30 +58,25 @@ const Overview = () => {
 
   // Helper function to determine crop health status
   const getCropHealthStatus = (weatherData) => {
-    if (!weatherData?.farming_advice?.risk_level) return { status: 'Loading...', description: 'Loading conditions...' };
+    if (!weatherData?.farming_advice?.risk_indicator) return { status: 'Loading...', description: 'Loading conditions...' };
 
-    const riskLevel = weatherData.farming_advice.risk_level;
-    const conditions = weatherData.current?.description || '';
-    const humidity = weatherData.current?.humidity || 0;
-    const windSpeed = weatherData.current?.wind_speed || 0;
+    const riskIndicator = weatherData.farming_advice.risk_indicator;
+    const weatherSummary = weatherData.farming_advice.weather_summary || '';
+    const recommendations = weatherData.farming_advice.recommendations || [];
 
     let status, description;
-    switch (riskLevel) {
-      case 'low':
-        status = 'Good';
-        description = 'Optimal growing conditions';
-        break;
-      case 'moderate':
-        status = 'Fair';
-        description = 'Moderate risk conditions';
-        break;
-      case 'high':
-        status = 'Attention';
-        description = `${conditions}, ${humidity}% Humidity, Wind ${windSpeed}m/s`;
-        break;
-      default:
-        status = 'Loading...';
-        description = 'Loading conditions...';
+    if (riskIndicator.toLowerCase().includes('low')) {
+      status = 'Good';
+      description = 'Optimal growing conditions';
+    } else if (riskIndicator.toLowerCase().includes('moderate')) {
+      status = 'Fair';
+      description = 'Moderate risk conditions';
+    } else if (riskIndicator.toLowerCase().includes('high')) {
+      status = 'Attention';
+      description = weatherSummary;
+    } else {
+      status = 'Loading...';
+      description = 'Loading conditions...';
     }
     return { status, description };
   };

@@ -7,11 +7,13 @@ import { FaEye, FaEyeSlash } from 'react-icons/fa';
 import { FaTractor, FaLeaf, FaSeedling } from 'react-icons/fa';
 import { GiWheat, GiFarmTractor, GiPlantWatering, GiCorn } from 'react-icons/gi';
 import { indianStates, indianCities } from '../utils/indianStates';
+import PasswordRules from '../components/PasswordRules';
 
 function Register() {
   const navigate = useNavigate();
   const { isAuthenticated } = useAuth();
   const [showPassword, setShowPassword] = useState(false);
+  const [showPasswordRules, setShowPasswordRules] = useState(false);
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     fullName: '',
@@ -27,6 +29,17 @@ function Register() {
       navigate('/dashboard');
     }
   }, [isAuthenticated, navigate]);
+
+  const validatePassword = (password) => {
+    const rules = [
+      password.length >= 6,
+      /[A-Z]/.test(password),
+      /[a-z]/.test(password),
+      /\d/.test(password),
+      /[!@#$%^&*(),.?":{}|<>]/.test(password)
+    ];
+    return rules.every(rule => rule);
+  };
 
   const validateForm = () => {
     // Validate full name (at least two words)
@@ -49,9 +62,9 @@ function Register() {
       return false;
     }
 
-    // Validate password (minimum 8 characters)
-    if (formData.password.length < 8) {
-      toast.error('Password must be at least 8 characters long');
+    // Validate password
+    if (!validatePassword(formData.password)) {
+      toast.error('Please ensure your password meets all requirements');
       return false;
     }
 
@@ -202,7 +215,7 @@ function Register() {
                 </div>
               </div>
 
-              <div>
+              <div className="relative">
                 <label htmlFor="password" className="block text-sm font-medium text-gray-700">
                   Password
                 </label>
@@ -214,22 +227,24 @@ function Register() {
                     required
                     value={formData.password}
                     onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                    className="block w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-1 focus:ring-green-500 focus:border-green-500 outline-none transition-colors"
-                    placeholder="Create a password"
-                    minLength="8"
+                    onFocus={() => setShowPasswordRules(true)}
+                    onBlur={() => setShowPasswordRules(false)}
+                    className="block w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-1 focus:ring-green-500 focus:border-green-500 outline-none transition-colors pr-12"
+                    placeholder="Enter your password"
                   />
                   <button
                     type="button"
                     onClick={togglePasswordVisibility}
-                    className="absolute inset-y-0 right-0 pr-3 flex items-center"
+                    className="absolute inset-y-0 right-0 flex items-center px-3 text-gray-500 hover:text-gray-600"
                   >
-                    {showPassword ? (
-                      <FaEyeSlash className="h-5 w-5 text-gray-400" />
-                    ) : (
-                      <FaEye className="h-5 w-5 text-gray-400" />
-                    )}
+                    {showPassword ? <FaEyeSlash size={20} /> : <FaEye size={20} />}
                   </button>
                 </div>
+                <PasswordRules 
+                  password={formData.password} 
+                  show={showPasswordRules} 
+                  onAllRulesMet={() => setShowPasswordRules(false)}
+                />
               </div>
 
               <div className="grid grid-cols-2 gap-4">
@@ -283,33 +298,31 @@ function Register() {
                 type="submit"
                 disabled={loading}
                 className={`w-full flex justify-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white ${
-                  loading 
-                    ? 'bg-green-400 cursor-not-allowed' 
+                  loading
+                    ? 'bg-gray-400 cursor-not-allowed'
                     : 'bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500'
-                } transition-colors`}
+                }`}
               >
                 {loading ? (
-                  <>
+                  <div className="flex items-center">
                     <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                       <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                       <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                     </svg>
                     Registering...
-                  </>
+                  </div>
                 ) : (
                   'Register'
                 )}
               </button>
-            </form>
 
-            <div className="mt-6 text-center">
-              <p className="text-sm text-gray-600">
+              <p className="text-center text-sm text-gray-600">
                 Already have an account?{' '}
                 <Link to="/login" className="font-medium text-green-600 hover:text-green-500">
-                  Login to your account
+                  Login here
                 </Link>
               </p>
-            </div>
+            </form>
           </div>
         </div>
       </div>
