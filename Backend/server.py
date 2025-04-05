@@ -61,6 +61,27 @@ except Exception as e:
     logger.error(f"Error connecting to MongoDB: {e}")
     raise
 
+# Root route
+@app.route('/', methods=['GET'])
+def root():
+    return jsonify({
+        "message": "Welcome to FarmCare API",
+        "status": "active",
+        "version": "1.0.0",
+        "endpoints": {
+            "health": "/health",
+            "auth": {
+                "register": "/auth/register",
+                "login": "/auth/login"
+            },
+            "analysis": {
+                "upload": "/upload/image",
+                "history": "/analysis/history",
+                "count": "/user/analysis/count"
+            }
+        }
+    }), 200
+
 # Health check endpoint
 @app.route('/health', methods=['GET'])
 def health_check():
@@ -69,7 +90,9 @@ def health_check():
         client.admin.command('ping')
         return jsonify({
             "status": "healthy",
-            "message": "Server is running and database is connected"
+            "message": "Server is running and database is connected",
+            "database": "connected",
+            "api": "running"
         }), 200
     except Exception as e:
         logger.error(f"Health check failed: {e}")
@@ -78,13 +101,32 @@ def health_check():
             "message": str(e)
         }), 500
 
-# Error handler
+# Error handlers
+@app.errorhandler(404)
+def not_found_error(error):
+    logger.warning(f"Route not found: {request.url}")
+    return jsonify({
+        "error": "Not Found",
+        "message": "The requested URL was not found on the server",
+        "status": 404
+    }), 404
+
+@app.errorhandler(500)
+def internal_error(error):
+    logger.error(f"Internal server error: {error}")
+    return jsonify({
+        "error": "Internal Server Error",
+        "message": "An internal server error occurred",
+        "status": 500
+    }), 500
+
 @app.errorhandler(Exception)
 def handle_error(error):
     logger.error(f"An error occurred: {error}")
     return jsonify({
-        "error": str(error),
-        "message": "An internal server error occurred"
+        "error": str(error.__class__.__name__),
+        "message": str(error),
+        "status": 500
     }), 500
 
 # Set JWT Secret Key
