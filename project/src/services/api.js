@@ -16,14 +16,15 @@ const api = axios.create({
 // Add request interceptor to include auth token and handle errors
 api.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem('token');
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
-    return config;
+  const token = localStorage.getItem('token');
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
   },
   (error) => {
-    return Promise.reject(new Error('Request failed'));
+    console.error('Request error:', error);
+    return Promise.reject(error);
   }
 );
 
@@ -31,26 +32,23 @@ api.interceptors.request.use(
 api.interceptors.response.use(
   (response) => response,
   (error) => {
+    console.error('API Error:', error.response?.data || error.message);
     if (error.response?.status === 401) {
       localStorage.removeItem('token');
       localStorage.removeItem('userData');
       window.location.href = '/login';
     }
-    // Don't log error details, return a generic error message
-    return Promise.reject(new Error(error.response?.data?.message || 'Operation failed'));
+    return Promise.reject(error);
   }
 );
 
 export const auth = {
   login: async (loginId, password) => {
-    try {
-      const response = await api.post('/user/login', { login_id: loginId, password });
-      return response.data;
-    } catch (error) {
-      throw new Error('Login failed. Please check your credentials.');
-    }
+    const response = await api.post('/user/login', { login_id: loginId, password });
+    return response.data;
   },
   register: async (userData) => {
+    // Format the data to match backend expectations
     const formattedData = {
       full_name: userData.fullName,
       email: userData.email,
@@ -62,9 +60,13 @@ export const auth = {
     
     try {
       const response = await api.post('/user/register', formattedData);
-      return response.data;
+    return response.data;
     } catch (error) {
-      throw new Error(error.response?.data?.message || 'Registration failed. Please try again.');
+      console.error('Registration error:', error.response?.data || error.message);
+      if (error.response?.data?.error) {
+        throw new Error(error.response.data.error);
+      }
+      throw new Error('Registration failed. Please try again.');
     }
   },
   adminLogin: async (loginId, password) => {
@@ -87,18 +89,24 @@ export const auth = {
       localStorage.removeItem('userData');
       return response.data;
     } catch (error) {
+      console.error('Logout error:', error.response?.data || error.message);
       // Still remove local storage items even if server request fails
       localStorage.removeItem('token');
       localStorage.removeItem('userData');
-      throw new Error('Logout failed');
+      throw error;
     }
   },
   updateProfile: async (data) => {
     try {
-      const response = await api.put('/user/profile', data);
+      const response = await api.put('/user/profile', data, {
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
       return response.data;
     } catch (error) {
-      throw new Error('Profile update failed');
+      console.error('Profile update error:', error.response?.data || error.message);
+      throw error;
     }
   },
   updateProfileImage: async (formData) => {
@@ -110,7 +118,8 @@ export const auth = {
       });
       return response.data;
     } catch (error) {
-      throw new Error('Profile image update failed');
+      console.error('Profile image update error:', error.response?.data || error.message);
+      throw error;
     }
   },
   getProfile: async () => {
@@ -118,7 +127,8 @@ export const auth = {
       const response = await api.get('/user/profile');
       return response.data;
     } catch (error) {
-      throw new Error('Failed to load profile');
+      console.error('Get profile error:', error.response?.data || error.message);
+      throw error;
     }
   }
 };
@@ -126,21 +136,21 @@ export const auth = {
 export const diseaseDetection = {
   uploadImage: async (file) => {
     try {
-      const formData = new FormData();
-      formData.append('file', file);
+    const formData = new FormData();
+    formData.append('file', file);
       
-      const response = await api.post('/user/upload', formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
+    const response = await api.post('/user/upload', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
         timeout: 30000, // 30 second timeout
-      });
+    });
 
       if (!response.data) {
         throw new Error('No response from server');
       }
 
-      return response.data;
+    return response.data;
     } catch (error) {
       console.error('Error in uploadImage:', error);
       if (error.response) {

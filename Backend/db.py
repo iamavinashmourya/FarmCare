@@ -6,7 +6,6 @@ import datetime
 from typing import Optional, Dict, List, Union
 from pymongo import MongoClient
 from math import radians, sin, cos, sqrt, atan2
-import logging
 
 # Load environment variables
 load_dotenv()
@@ -55,11 +54,9 @@ def get_user_by_email_or_mobile(email: str, mobile: str) -> Optional[Dict]:
         user = users_collection.find_one({"$or": [{"email": email}, {"mobile": mobile}]})
         if user:
             user["_id"] = str(user["_id"])
-            # Remove sensitive fields
-            user.pop('password', None)
         return user
     except Exception as e:
-        logger.error("Database error in get_user_by_email_or_mobile", exc_info=True)
+        print(f"Error finding user: {e}")
         return None
 
 def create_user(full_name: str, email: str, mobile: str, password: str, is_admin: bool = False, state: str = None, region: str = None) -> Dict:
@@ -81,11 +78,9 @@ def create_user(full_name: str, email: str, mobile: str, password: str, is_admin
     try:
         result = users_collection.insert_one(new_user)
         new_user["_id"] = str(result.inserted_id)
-        # Remove sensitive fields before returning
-        new_user.pop('password', None)
         return new_user
     except Exception as e:
-        logger.error("Database error in create_user", exc_info=True)
+        print(f"Error creating user: {e}")
         raise
 
 def update_user_profile_image(user_id: str) -> Dict:
@@ -109,7 +104,7 @@ def update_user_last_login(user_id: str) -> None:
             {"$set": {"last_login": datetime.datetime.utcnow()}}
         )
     except Exception as e:
-        logger.error("Database error in update_user_last_login", exc_info=True)
+        print(f"Error updating last login: {e}")
         raise
 
 # Scheme Management Functions
@@ -330,7 +325,7 @@ def save_upload_history(user_id: str, file_path: str, analysis_result: str) -> s
         result = uploads_collection.insert_one(upload_entry)
         return str(result.inserted_id)
     except Exception as e:
-        logger.error("Database error in save_upload_history", exc_info=True)
+        print(f"Error saving upload history: {e}")
         raise
 
 def get_user_uploads(user_id: str) -> List[Dict]:
@@ -514,7 +509,7 @@ def update_notification_preferences(user_id: str, preferences: Dict) -> None:
             {"$set": {"notification_preferences": preferences}}
         )
     except Exception as e:
-        logger.error("Database error in update_notification_preferences", exc_info=True)
+        print(f"Error updating notification preferences: {e}")
         raise
 
 def get_notification_preferences(user_id: str) -> Dict:
@@ -530,7 +525,7 @@ def get_notification_preferences(user_id: str) -> Dict:
             "govt_scheme": True
         })
     except Exception as e:
-        logger.error("Database error in get_notification_preferences", exc_info=True)
+        print(f"Error getting notification preferences: {e}")
         raise
 
 def save_push_subscription(user_id: str, subscription: Dict) -> None:
@@ -541,7 +536,7 @@ def save_push_subscription(user_id: str, subscription: Dict) -> None:
             {"$set": {"push_subscription": subscription}}
         )
     except Exception as e:
-        logger.error("Database error in save_push_subscription", exc_info=True)
+        print(f"Error saving push subscription: {e}")
         raise
 
 def remove_push_subscription(user_id: str) -> None:
@@ -552,5 +547,5 @@ def remove_push_subscription(user_id: str) -> None:
             {"$unset": {"push_subscription": ""}}
         )
     except Exception as e:
-        logger.error("Database error in remove_push_subscription", exc_info=True)
+        print(f"Error removing push subscription: {e}")
         raise
