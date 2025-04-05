@@ -65,26 +65,3 @@ const Dashboard = () => {
 };
 
 export default Dashboard;
-          <main className="flex-1 overflow-auto pb-20">
-            <div className="p-4 sm:p-6 lg:p-8">
-              <Routes>
-                <Route index element={<Overview />} />
-                <Route path="ai" element={<FarmcareAI />} />
-                <Route path="weather" element={<Weather />} />
-                <Route path="prices" element={<MarketPrices />} />
-                <Route path="articles" element={<ExpertArticles />} />
-                <Route path="news" element={<DailyNews />} />
-                <Route path="settings" element={<Settings />} />
-                <Route path="profile" element={<EditProfile />} />
-                <Route path="*" element={<Navigate to="/dashboard" replace />} />
-              </Routes>
-            </div>
-          </main>
-          <Footer />
-        </div>
-      </div>
-    </div>
-  );
-};
-
-export default Dashboard;
