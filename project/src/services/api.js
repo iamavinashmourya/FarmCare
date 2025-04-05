@@ -105,32 +105,27 @@ export const auth = {
 export const diseaseDetection = {
   uploadImage: async (file) => {
     try {
-    const formData = new FormData();
-    formData.append('file', file);
+      const formData = new FormData();
+      formData.append('file', file);
       
-      // Make direct request to Flask server
-      const response = await axios.post('http://127.0.0.1:5000/user/upload', formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
-    });
+      const response = await api.post('/user/upload', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
 
       if (!response.data) {
         throw new Error('No response from server');
       }
 
-    return response.data;
+      return response.data;
     } catch (error) {
       console.error('Error in uploadImage:', error);
       if (error.response) {
-        // The request was made and the server responded with a status code
-        // that falls out of the range of 2xx
         throw new Error(error.response.data.message || 'Server error');
       } else if (error.request) {
-        // The request was made but no response was received
         throw new Error('No response from server. Please check if the server is running.');
       } else {
-        // Something happened in setting up the request that triggered an Error
         throw new Error('Error setting up the request');
       }
     }
@@ -233,12 +228,12 @@ export const getSchemes = async () => {
 
 export const detectPlantDisease = async (formData) => {
   try {
-    const token = localStorage.getItem('token'); // Get token from localStorage
+    const token = localStorage.getItem('token');
     if (!token) {
       throw new Error('No authentication token found');
     }
 
-    const response = await axios.post('http://127.0.0.1:5000/user/upload', formData, {
+    const response = await api.post('/user/upload', formData, {
       headers: {
         'Content-Type': 'multipart/form-data',
         'Authorization': `Bearer ${token}`
