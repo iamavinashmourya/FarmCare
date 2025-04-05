@@ -52,6 +52,8 @@ CORS(app, resources={
 # MongoDB connection
 try:
     mongo_uri = os.getenv('MONGO_URI')
+    if not mongo_uri:
+        raise ValueError("MONGO_URI environment variable not set")
     client = MongoClient(mongo_uri)
     db = client.get_database('farmcare')
     logger.info("Connected to MongoDB successfully!")
