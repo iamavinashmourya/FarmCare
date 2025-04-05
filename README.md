@@ -2,6 +2,10 @@
 
 ![FarmCare Logo](https://farmcare-crop-images.s3.ap-south-1.amazonaws.com/crops/Logo_1Farmcare.png) <!-- You can add your logo image later -->
 
+## Live Application
+
+🌐 **Explore:** [https://myfarmcare.vercel.app](https://myfarmcare.vercel.app)
+
 ## Overview
 
 FarmCare is a comprehensive agriculture management system designed to help farmers optimize their crop production through AI-powered insights, weather monitoring, and government scheme tracking. The application combines modern technology with agricultural expertise to provide farmers with actionable insights and recommendations.
@@ -43,6 +47,7 @@ FarmCare is a comprehensive agriculture management system designed to help farme
 - JWT Authentication
 - AWS S3 for image storage
 - Google Cloud Vision AI
+- Gemini
 
 ## Prerequisites
 
