@@ -78,7 +78,7 @@ function Register() {
 
     try {
       setLoading(true);
-      await auth.register(formData);
+      const response = await auth.register(formData);
       toast.success('Registration successful! Please login.');
       navigate('/login');
     } catch (error) {

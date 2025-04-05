@@ -62,10 +62,11 @@ export const auth = {
       const response = await api.post('/user/register', formattedData);
       return response.data;
     } catch (error) {
+      console.error('Registration error:', error.response?.data || error.message);
       if (error.response?.data?.error) {
         throw new Error(error.response.data.error);
       }
-      throw error;
+      throw new Error('Registration failed. Please try again.');
     }
   },
   adminLogin: async (loginId, password) => {

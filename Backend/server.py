@@ -43,7 +43,8 @@ CORS(app,
          "origins": ["https://myfarmcare.vercel.app", "http://localhost:5173"],
          "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
          "allow_headers": ["Content-Type", "Authorization"],
-         "supports_credentials": True
+         "supports_credentials": True,
+         "expose_headers": ["Content-Type", "Authorization"]
      }})
 
 # MongoDB connection
@@ -292,84 +293,58 @@ INDIAN_STATES_AND_REGIONS = {
 
 @app.route('/user/register', methods=['POST'])
 def user_register():
-    """Register a new regular user"""
     try:
-    data = request.get_json()
+        data = request.get_json()
         
-        # Check if data is None
-        if not data:
-            return jsonify({"error": "No data provided"}), 400
-
-        # Required fields with validation
-        required_fields = {
-            'full_name': 'Full Name',
-            'email': 'Email',
-            'mobile': 'Mobile Number',
-            'password': 'Password',
-            'state': 'State',
-            'region': 'City'
-        }
-
-        # Check for missing fields
-        missing_fields = []
-        for field, label in required_fields.items():
+        # Validate required fields
+        required_fields = ['full_name', 'email', 'mobile', 'password', 'state', 'region']
+        for field in required_fields:
             if not data.get(field):
-                missing_fields.append(label)
-
-        if missing_fields:
-            return jsonify({
-                "error": "All fields are required",
-                "missing_fields": missing_fields
-            }), 400
+                return jsonify({'error': f'{field} is required'}), 400
 
         # Validate full name (at least two words)
-        name_parts = data['full_name'].strip().split()
-        if len(name_parts) < 2:
-            return jsonify({"error": "Please enter your full name (first name and last name)"}), 400
+        if len(data['full_name'].split()) < 2:
+            return jsonify({'error': 'Full name must include first and last name'}), 400
 
         # Validate mobile number (exactly 10 digits)
         if not re.match(r'^\d{10}$', data['mobile']):
-            return jsonify({"error": "Please enter a valid 10-digit mobile number"}), 400
+            return jsonify({'error': 'Mobile number must be exactly 10 digits'}), 400
 
         # Validate email format
-        if not re.match(r'^[^\s@]+@[^\s@]+\.[^\s@]+$', data['email']):
-            return jsonify({"error": "Please enter a valid email address"}), 400
+        if not validate_email(data['email']):
+            return jsonify({'error': 'Invalid email format'}), 400
 
-        # Validate password length
-        if len(data['password']) < 8:
-            return jsonify({"error": "Password must be at least 8 characters long"}), 400
-
-        # Validate state and region
-        if data['state'] not in INDIAN_STATES_AND_REGIONS:
-            return jsonify({"error": "Invalid state selected"}), 400
-
-        if data['region'] not in INDIAN_STATES_AND_REGIONS[data['state']]:
-            return jsonify({"error": "Selected city does not belong to the selected state"}), 400
+        # Validate password
+        if not validate_password(data['password']):
+            return jsonify({'error': 'Password must be at least 8 characters long'}), 400
 
         # Check if user already exists
         existing_user = get_user_by_email_or_mobile(data['email'], data['mobile'])
-        
         if existing_user:
-            if existing_user.get('email') == data['email']:
-                return jsonify({"error": "Email already registered"}), 400
-            else:
-                return jsonify({"error": "Mobile number already registered"}), 400
+            return jsonify({'error': 'User with this email or mobile already exists'}), 409
 
-        # Create user with hashed password
+        # Create new user
         hashed_password = hash_password(data['password'])
-        create_user(data['full_name'], data['email'], data['mobile'], hashed_password, is_admin=False, state=data['state'], region=data['region'])
+        user_data = {
+            'full_name': data['full_name'],
+            'email': data['email'],
+            'mobile': data['mobile'],
+            'password': hashed_password,
+            'state': data['state'],
+            'region': data['region'],
+            'created_at': datetime.datetime.utcnow()
+        }
 
+        user_id = create_user(user_data)
+        
         return jsonify({
-            "message": "Registration successful! You can now login.",
-            "status": "success"
+            'message': 'Registration successful',
+            'user_id': str(user_id)
         }), 201
 
     except Exception as e:
         logger.error(f"Registration error: {str(e)}")
-        return jsonify({
-            "error": "Registration failed. Please try again.",
-            "details": str(e)
-        }), 500
+        return jsonify({'error': 'Registration failed. Please try again.'}), 500
 
 @app.route('/user/login', methods=['POST'])
 def user_login():
